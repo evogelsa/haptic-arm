@@ -17,7 +17,7 @@ from odrive.enums import *
 # that time to the file provided to the function. The time is the current time
 # minus the initialization time
 #
-def torqueSine(torqfile, t0):
+def torqueSine(torquefile, t0, odrv):
    # get time difference since start of program
    t = time.monotonic() - t0
    # calculate a voltage based on sine wave
@@ -30,13 +30,13 @@ def torqueSine(torqfile, t0):
    T = 8.269933431 * I / 41
    # create a string of format 'time,torque' with newline
    coord = str(t) + ',' + str(T) + '\n'
-   # write coord to the torqfile
-   data = open(torqfile,'a')
+   # write coord to the torquefile
+   data = open(torquefile,'a')
    data.write(coord)
    # close the file
    data.close()
    #print some debugging vals to console
-   print(" {0:9f} | {0:9f} | {1:9f} | {2:9f}".format(t, voltage, I, T))
+   print("%-9f | %-9f | %-9f | %-9f" %(t, voltage, I, T))
 
 
 # calcInputs(data_file_path)
@@ -45,7 +45,7 @@ def torqueSine(torqfile, t0):
 # estimated angular velocity in rad/s and an estimated angular acceleration
 # from those two velocities.
 #
-def calcInputs(alphafile):
+def calcInputs(alphafile, odrv):
    # make list of size 2 to store angular vel
    omegas = [0,0]
    for _ in range(2):
@@ -98,17 +98,17 @@ def plotSetup():
       n = 1
       # iterate through files 0 to x until x doesn't exist
       while n > 0:
-         torqfile = 'logs/tout' + str(n) + '.txt'
-         if isfile(torqfile):
+         torquefile = 'logs/tout' + str(n) + '.txt'
+         if isfile(torquefile):
             n += 1
          else:
-            data = open(torqfile,'w')
+            data = open(torquefile,'w')
             data.write('0,0\n')
             data.close()
             n = 0
    else:
-      torqfile = 'logs/tout0.txt'
-      data = open(torqfile,'w')
+      torquefile = 'logs/tout0.txt'
+      data = open(torquefile,'w')
       data.write('0,0\n')
       data.close()
    # check if aout0 exists and if it does create file with correct number
@@ -126,7 +126,7 @@ def plotSetup():
             n = 0
    else:
       alphafile = 'logs/aout0.txt'
-      data = open(torqfile,'w')
+      data = open(torquefile,'w')
       data.write('0,0,0\n')
       data.close()
    # make some empty arrays
@@ -134,7 +134,7 @@ def plotSetup():
    Y = []
    A = []
 
-   return fig, ax1, ax2, torqfile, X, Y, A, alphafile
+   return fig, ax1, ax2, torquefile, X, Y, A, alphafile
 
 
 # animate(interval, float_array_time, float_array_torque, float_array_alpha)
@@ -145,12 +145,12 @@ def plotSetup():
 # amount of data trimemed * the interval of measurements. I.e. measurements 
 # every 10 ms * 200 data points = 2 seconds of data shown on the plot
 # 
-def animate(i,X,Y,A):
+def animate(i,t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2):
    # run torque sine to generate new point and write to file
-   torqueSine(torqfile, t0)
-   calcInputs(alphafile)
+   torqueSine(torquefile, t0, odrv)
+   calcInputs(alphafile, odrv)
    # read the file to see the new data
-   data = open(torqfile,'r').read()
+   data = open(torquefile,'r').read()
    # split each coord with \n
    lines = data.split('\n')
    # make empty data arrays
@@ -249,14 +249,14 @@ def main():
    # setup ODrive
    odrv = odrvSetup()
    # setup plot
-   fig, ax1, ax2, torqfile, X, Y, A, alphafile = plotSetup()
+   fig, ax1, ax2, torquefile, X, Y, A, alphafile = plotSetup()
    # set our starting time to current sys time, used for calculating time passed
    t0 = time.monotonic()
    print("Performing sine wave...")
    # print formatted headers 
-   print(" {0:9s} | {0:9s} | {1:9s} | {2:9s}".format("Time","Volts","Current","Torque"))
+   print("%-9s | %-9s | %-9s | %-9s" %(" Time","Volts","Current","Torque"))
    # animation function takes figure to use, func for animation, update interval 
-   ani = animation.FuncAnimation(fig, animate, fargs=(X,Y,A), interval=10)
+   ani = animation.FuncAnimation(fig,animate,fargs=(t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2),interval=20)
    # show our plot
    plot.show()
 
