@@ -43,9 +43,9 @@ def calcInputs(alphafile):
    # make list of size 2 to store angular vel
    omegas = [0,0]
    for _ in range(2):
-      # read two encoder counts 5ms after each other
+      # read two encoder counts 10ms after each other
       c1 = odrv.axis0.encoder.count_in_cpr
-      time.sleep(0.005)
+      time.sleep(0.01)
       c2 = odrv.axis0.encoder.count_in_cpr
       # calc change in encoder counts "delta count"
       dc = c2 - c1
@@ -54,11 +54,11 @@ def calcInputs(alphafile):
       # convert degrees to radians
       theta = deg * math.pi / 180
       # store two measurements of angular vel inside omegas
-      omegas[_] = theta / 0.005
+      omegas[_] = theta / 0.01
    # calc change in omegas "delta omega"
    domega = omegas[0] - omegas[1]
    # angular acceleration = change in vel / change in time
-   alpha = domega / 0.01
+   alpha = domega / 0.02
    # output the omegas and the alpha to a text file "aout#.txt"
    vals = str(omegas[0]) + ',' + str(omegas[1]) + ',' + str(alpha) + '\n'
    data = open(alphafile,'a')
@@ -82,6 +82,8 @@ def plotSetup():
    ax1 = fig.add_subplot(1,1,1)
    # make second axis with same x axis as ax1
    ax2 = ax1.twinx()
+   # adjust the padding of plots
+   plot.subplots_adjust(left=.140,right=.84,bottom=.14,top=.92)
    # check for logs folder, if not exist make it
    if not isdir('logs'):
       mkdir('logs')
@@ -178,7 +180,6 @@ def animate(i,X,Y,W1,W2,A):
    ax1.plot(X,[round(y, 3) for y in Y])
    plot.xticks(rotation=45, ha='right')
    plot.ylim((-.3,.3))
-   #plot.yticks(np.arange(-0.25,0.25,0.05))
    plot.title('Torque vs Time')
    plot.xlabel('Time')
    plot.ylabel('Torque (nm)')
@@ -186,7 +187,7 @@ def animate(i,X,Y,W1,W2,A):
    plot.sca(ax2)
    plot.plot(color='r')
    ax2.plot(X,[round(a, 3) for a in A], color='red',linewidth=0.8)
-   plot.ylim((-2500,2500))
+   plot.ylim((-350,350))
    plot.ylabel('Angular Acceleration (rads/s/s)')
 # 
 # End animation function
