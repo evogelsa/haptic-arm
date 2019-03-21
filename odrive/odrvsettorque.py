@@ -2,7 +2,6 @@ from os.path import isfile, isdir
 from os import mkdir
 import math
 import time
-import numpy as np
 import matplotlib.pyplot as plot
 import matplotlib.animation as animation
 from matplotlib import style
