@@ -1,3 +1,5 @@
+#Author: Ethan Vogelsang
+#Last Modified: 3/22/19
 from os.path import isfile, isdir
 from os import mkdir
 import math
