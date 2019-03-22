@@ -1,9 +1,11 @@
 # RothLab
 
 ###ODrive
+
 #####Author: Ethan Vogelsang
 
 ######Brief Script Descriptions
+
 | Script           | Description                                |
 | ---------------- | ------------------------------------------ |
 | odrvcosine.py    | cosine wave using pos control              | 
