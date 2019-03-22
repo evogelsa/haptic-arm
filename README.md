@@ -1,10 +1,10 @@
 # RothLab
 
-###ODrive
+### ODrive
 
-#####Author: Ethan Vogelsang
+##### Author: Ethan Vogelsang
 
-######Brief Script Descriptions
+###### Brief Script Descriptions
 
 | Script           | Description                                |
 | ---------------- | ------------------------------------------ |
