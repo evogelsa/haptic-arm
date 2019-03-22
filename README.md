@@ -1,7 +1,6 @@
 # RothLab
 
 ### ODrive  
-##### Author: Ethan Vogelsang  
 
 
 | Script           | Description                                |
