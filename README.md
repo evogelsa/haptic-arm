@@ -15,3 +15,4 @@
 | odrvplot.py      | live plots torque and angular acceleration |
 | odrvsettorque.py | same as odrvplot but with set torque val   |
 | odrvtorque.py    | prints out torque calculated from voltage  |
+| odrvplotrefac.py | refactored version of odrvplot             |
