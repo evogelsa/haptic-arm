@@ -70,13 +70,13 @@ def plotSetup():
    style.use("fivethirtyeight")
    # add 3 axes to fig all sharing an x axis
    fig, (ax1, ax2, ax3) = plt.subplots(nrows = 1, ncols = 3, sharex = True)
-   # add plot elements to object for clean passing
+   # add plot elements to class for clean passing
    class figure:
       def __init__(self, ax1, ax2, ax3):
          self.ax1 = ax1
          self.ax2 = ax2
          self.ax3 = ax3
-      def clrax(self):
+      def clrAx(self):
          self.ax1.clear()
          self.ax2.clear()
          self.ax3.clear()
@@ -147,15 +147,17 @@ def calcTorque(t, odrv):
 #
 #
 def calcAccel():
-   return 0
+   if (odrv == 0 ):
+        return 0
 
 
 # calcPos
 #
 #
 def calcPos():
-   return 0
-   
+   if (odrv == 0):
+       return 0
+
 
 # plotUpdate(interval, figure object, log path, start time, new data, odrv obj)
 #
@@ -170,7 +172,7 @@ def plotUpdate(i, myFig, logfile, t0, data, odrv):
       data[i].append(newData[i])
       data[i] = data[i][-50:]
    # clear all axes and replot with new data
-   myFig.clrax()
+   myFig.clrAx()
    myFig.ax1.plot(data[0], [round(T, 4) for T in data[1]])
    myFig.ax2.plot(data[0], [round(a, 4) for a in data[2]])
    myFig.ax3.plot(data[0], [round(p, 4) for p in data[3]])

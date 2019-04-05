@@ -1,5 +1,5 @@
 #Author: Ethan Vogelsang
-#Last Modified: 3/22/19
+#Last Modified: 04/02/2019
 from os.path import isfile, isdir
 from os import mkdir
 import math
@@ -45,13 +45,28 @@ def torqueSine(torquefile, t0, odrv):
 #
 # this function writes the position in degrees to a data file provided in args
 #
-def calcPos(posfile, odrv):
-   pos = odrv.axis0.encoder.count_in_cpr
-   pos = pos / 8192 * 360
-   val = str(pos) + '\n'
+def calcPos(posfile, odrv, k):
+   pos1 = odrv.axis0.encoder.count_in_cpr
+   pos1 = (pos1 / 8192 * 360) + (360 * k)
+   with open(posfile) as data:
+      for i, lines in enumerate(data):
+         pass
+   with open(posfile) as data:
+      for line in range(i):
+         data.readline()
+      val = data.readline()
+   print(val)
+   pos2 = float(val)
+   if (pos1 - pos2) > 30:
+      k += 1
+   elif (pos1 - pos2) < 30:
+      k -= 1
+   pos1 = pos1 + 360 * k
+   val = str(pos1) + '\n'
    data = open(posfile, 'a')
    data.write(val)
    data.close()
+   return k
 
 
 # calcWA(data_file_path)
@@ -160,7 +175,7 @@ def plotSetup():
             n = 0
    else:
       posfile = 'logs/pout0.txt'
-      data = open(torquefile,'w')
+      data = open(posfile,'w')
       data.write('0.0\n')
       data.close()
    # make some empty arrays
@@ -180,11 +195,11 @@ def plotSetup():
 # amount of data trimemed * the interval of measurements. I.e. measurements 
 # every 10 ms * 200 data points = 2 seconds of data shown on the plot
 # 
-def animate(i,t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,posfile,P,ax3):
+def animate(i,t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,posfile,P,ax3,k):
    # run torque sine to generate new point and write to file
    torqueSine(torquefile, t0, odrv)
    calcWA(alphafile, odrv)
-   calcPos(posfile, odrv)
+   k = calcPos(posfile, odrv, k)
    # read the file to see the new data
    data = open(torquefile,'r').read()
    # split each coord with \n
@@ -230,12 +245,12 @@ def animate(i,t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,posfile,P,ax3):
    # set current axis to ax1
    plot.sca(ax1)
    # draw new data onto plot and round to four decimal places
-   ax1.plot(X,[round(y, 4) for y in Y])
-   plot.xticks(rotation=45, ha='right')
-   plot.ylim((-.3,.3))
-   plot.title('Torque vs Time')
-   plot.xlabel('Time')
-   plot.ylabel('Torque (nm)')
+#   ax1.plot(X,[round(y, 4) for y in Y])
+#   plot.xticks(rotation=45, ha='right')
+#   plot.ylim((-.3,.3))
+#   plot.title('Torque vs Time')
+#   plot.xlabel('Time')
+#   plot.ylabel('Torque (nm)')
    # set current axis to ax2
    plot.sca(ax2)
    plot.plot(color='r')
@@ -243,11 +258,11 @@ def animate(i,t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,posfile,P,ax3):
    plot.ylim((-500,500))
    plot.ylabel('Pos (deg)')
    # set current axis to ax3
-   plot.sca(ax3)
-   plot.plot(color='g')
-   ax3.plot(X,[round(a,4) for a in A], color='green',linewidth=0.8)
-   plot.ylim((-350,350))
-   plot.ylabel('Angular Acceleration (rads/s/s)')
+#   plot.sca(ax3)
+#   plot.plot(color='g')
+#   ax3.plot(X,[round(a,4) for a in A], color='green',linewidth=0.8)
+#   plot.ylim((-350,350))
+#   plot.ylabel('Angular Acceleration (rads/s/s)')
 
 
 # odrvSetup()
@@ -300,6 +315,7 @@ def odrvSetup():
 # starts the live plotting program
 #
 def main():
+   k = 0
    # setup ODrive
    odrv = odrvSetup()
    # setup plot
@@ -310,7 +326,7 @@ def main():
    # print formatted headers 
    print("%-9s | %-9s | %-9s | %-9s" %(" Time","Volts","Current","Torque"))
    # animation function takes figure to use, func for animation, update interval 
-   ani = animation.FuncAnimation(fig,animate,fargs=(t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,posfile,P,ax3),interval=10)
+   ani = animation.FuncAnimation(fig,animate,fargs=(t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,posfile,P,ax3,k),interval=10)
    # show our plot
    plot.show()
 
