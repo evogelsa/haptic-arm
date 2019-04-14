@@ -6,3 +6,4 @@ tags
 pyqtexample.py
 scrolling.py
 singleplot.py
+*.swp
