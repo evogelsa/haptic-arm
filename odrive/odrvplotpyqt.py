@@ -2,13 +2,18 @@
 #Last Modified: 04/03/2019
 from os.path import isfile, isdir
 from os import mkdir
-import math
-import time
+from math import sin
+from time import sleep, monotonic
+from pyqtgraph.Qt import QtCore, QtGui
+import pyqtgraph as pg
 import numpy as np
 import odrive
 from odrive.enums import *
-from pyqtgraph.Qt import QtCore, QtGui
-import pyqtgraph as pg
+
+
+# Constants: interval to update data at, size set to show one period
+UPDATE_INTERVAL = 20 #milliseconds
+ARRAY_SIZE = round(2000 * np.pi / UPDATE_INTERVAL)
 
 
 # odrvSetup(connect)
@@ -30,7 +35,7 @@ def odrvSetup(connect):
       # perform a quick calibration and check for completion
       odrv.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
       while odrv.axis0.current_state != AXIS_STATE_IDLE:
-         time.sleep(.1)
+         sleep(.1)
       # handle errors that may occur in setup sequence 
       if odrv.axis0.error:
          if odrv.axis0.encoder.error:
@@ -70,10 +75,12 @@ def logFile():
    # create log file
    n = 0
    while True:
+      # creates a string called logout#.txt and tests if it exists
       logfile = "logs/logout" + str(n) + ".txt"
       if isfile(logfile):
          n += 1
       else:
+      # increments until a new one can be created without deleting old data
          with open(logfile, 'w') as file:
             # x,y1,y2,y3 -- x is time
             file.write("0,0,0,0,0\n")
@@ -89,13 +96,13 @@ def logFile():
 def calcAll(logfile, t0, odrv):
    data = [0] * 5
    # get time difference since start of program
-   data[0] = time.monotonic() - t0
+   data[0] = monotonic() - t0
    # get new values
    data[1] = calcTorque(data[0], odrv)
    data[2] = calcAccel(odrv)
    data[3] = calcPos(odrv)
    data[4] = calcVel(odrv)
-   # create a string of format 'time,torque,accel,pos' with newline
+   # create a string of format 'time,torque,accel,pos,vel' with newline
    val = ""
    for i in range(5):
       if i < 4:
@@ -116,7 +123,7 @@ def calcAll(logfile, t0, odrv):
 # called by calcAll, returns torque
 def calcTorque(t, odrv):
    # calculate a voltage based on sine wave
-   voltage = 5 * math.sin(t)
+   voltage = 5 * sin(t)
    # set odrv to calculated voltage
    if (odrv != 0):
       odrv.axis0.controller.current_setpoint = voltage
@@ -134,7 +141,9 @@ def calcTorque(t, odrv):
 def calcVel(odrv):
    if (odrv == 0):
       return 0
+   # grab value that odrv calculates in encoder counts per second
    velcps = odrv.axis0.motor.rotor.pll_vel
+   # convert to rad per second
    velrad = velcps * 2 * np.pi / 8192
    return velrad
 
@@ -154,7 +163,9 @@ def calcAccel(odrv):
 def calcPos(odrv):
    if (odrv == 0):
       return 0
+   # odrv records shadow count = encoder counts + revolutions * counts/rev
    counts = odrv.axis0.encoder.shadow_count
+   # convert counts to rads
    rad = counts * 2 * np.pi / 8192
    return rad
 
@@ -166,15 +177,15 @@ odrv = odrvSetup(0)
 win = pg.GraphicsWindow()
 win.setWindowTitle("ODrive")
 
+
 # init data dictionary
 data = {
-   "time": np.zeros(200),
-   "torque": np.zeros(200),
-   "pos": np.zeros(200),
-   "accel": np.zeros(200),
-   "vel": np.zeros(200)
+   "time": np.zeros(ARRAY_SIZE),
+   "torque": np.zeros(ARRAY_SIZE),
+   "pos": np.zeros(ARRAY_SIZE),
+   "accel": np.zeros(ARRAY_SIZE),
+   "vel": np.zeros(ARRAY_SIZE)
 }
-
 
 # add plots to window and set appropriate ranges
 p1 = win.addPlot()
@@ -204,7 +215,7 @@ curve4 = p4.plot(data["time"], data["accel"])
 logfile = logFile() 
 
 # record time 0
-t0 = time.monotonic()
+t0 = monotonic()
 
 def update():
    newData = calcAll(logfile, t0, odrv)
@@ -213,15 +224,20 @@ def update():
    for j in range(5):
       data[tags[j]][0] = newData[j]
       data[tags[j]] = np.roll(data[tags[j]],-1)
+   # update data on plots
    curve1.setData(data["time"], data["torque"])
    curve2.setData(data["time"], data["pos"])
    curve3.setData(data["time"], data["vel"])
    curve4.setData(data["time"], data["accel"])
 
-timer = pg.QtCore.QTimer()
+# start Qt
+timer = QtCore.QTimer()
+# tell timer which function is the update function
 timer.timeout.connect(update)
-timer.start(50)
+# set update interval (defined at top of file)
+timer.start(UPDATE_INTERVAL)
 
+# start application
 QtGui.QApplication.instance().exec_()   
 
 #if __name__ == '__main__':
