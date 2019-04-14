@@ -3,3 +3,6 @@ aout*.txt
 pout*.txt
 logout*.txt
 tags
+pyqtexample.py
+scrolling.py
+singleplot.py
