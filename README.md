@@ -16,3 +16,4 @@
 | odrvsettorque.py | same as odrvplot but with set torque val   |
 | odrvtorque.py    | prints out torque calculated from voltage  |
 | odrvplotrefac.py | refactored version of odrvplot             |
+| odrvplotpyqt.py  | new version of odrvplot using pyqt         |
