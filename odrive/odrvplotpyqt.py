@@ -169,6 +169,22 @@ def calcPos(odrv):
    rad = counts * 2 * np.pi / 8192
    return rad
 
+# update
+#
+# function called by Qtimer that updates the data and plot
+def update():
+   newData = calcAll(logfile, t0, odrv)
+   # add new data to list and get rid of the oldest data
+   tags = ["time","torque","accel","vel", "pos"]
+   for j in range(5):
+      data[tags[j]][0] = newData[j]
+      data[tags[j]] = np.roll(data[tags[j]],-1)
+   # update data on plots
+   curve1.setData(data["time"], data["torque"])
+   curve2.setData(data["time"], data["pos"])
+   curve3.setData(data["time"], data["vel"])
+   curve4.setData(data["time"], data["accel"])
+
 
 # connect to odrive if non zero, otherwise simulate torque
 odrv = odrvSetup(0)
@@ -176,7 +192,6 @@ odrv = odrvSetup(0)
 # create window 
 win = pg.GraphicsWindow()
 win.setWindowTitle("ODrive")
-
 
 # init data dictionary
 data = {
@@ -216,19 +231,6 @@ logfile = logFile()
 
 # record time 0
 t0 = monotonic()
-
-def update():
-   newData = calcAll(logfile, t0, odrv)
-   # add new data to list and get rid of the oldest data
-   tags = ["time","torque","accel","vel", "pos"]
-   for j in range(5):
-      data[tags[j]][0] = newData[j]
-      data[tags[j]] = np.roll(data[tags[j]],-1)
-   # update data on plots
-   curve1.setData(data["time"], data["torque"])
-   curve2.setData(data["time"], data["pos"])
-   curve3.setData(data["time"], data["vel"])
-   curve4.setData(data["time"], data["accel"])
 
 # start Qt
 timer = QtCore.QTimer()
