@@ -169,6 +169,7 @@ def calcPos(odrv):
    rad = counts * 2 * np.pi / 8192
    return rad
 
+
 # update
 #
 # function called by Qtimer that updates the data and plot
