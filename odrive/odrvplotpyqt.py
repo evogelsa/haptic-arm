@@ -7,6 +7,7 @@ from time import sleep, monotonic
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as np
+from scipy.signal import savgol_filter
 import odrive
 from odrive.enums import *
 
@@ -152,15 +153,16 @@ def calcVel(odrv):
 #
 #
 def calcAccel(odrv):
-   if (odrv == 0 ):
+   if (odrv == 0):
       return 0
    # create empy matrix and place 7 most recent position points
-   P = np.empty((7,1))
-   for r in range(-1, -8, -1):
-      P[r,0] = data["pos"][r]
+   P = np.empty((6,1))
+   for r in range(0,6):
+      P[r,0] = data["pos"][-r - 1]
    # multiply by COEFS to get derivative estimates
-   Derivs = P * COEFS
+   Derivs = np.dot(COEFS, P)
    # Derivs stores pos, vel, accel, jerk, snap, crackle, pop
+   print(Derivs)
    accel = Derivs[2,0]
    return accel
 
@@ -192,20 +194,21 @@ def update():
    curve1.setData(data["time"], data["torque"])
    curve2.setData(data["time"], data["pos"])
    curve3.setData(data["time"], data["vel"])
-   curve4.setData(data["time"], data["accel"])
+   accelSmooth = savgol_filter(data["accel"], 21, 3)
+   curve4.setData(data["time"], accelSmooth)
 
 
 # connect to odrive if non zero, otherwise simulate torque
-odrv = odrvSetup(0)
+odrv = odrvSetup(1)
 
 # create matrix of inverse of coefficients of 7th degree taylor polynomial
 COEFS = np.linalg.pinv(np.array([
-[1,  0, 0,     0,     0,       0,      0       ],
-[1, -1, 1/2,  -1/6,   1/24,   -1/120,  1/720   ],
-[1, -2, 2,    -4/3,   2/3,    -4/15,   4/45    ],
-[1, -3, 9/2,  -9/2,   27/8,    81/40,  81/80   ],
-[1, -4, 8,    -32/3,  32/3,   -128/15, 256/45  ],
-[1, -5, 25/2, -125/6, 625/24, -625/24, 3125/144]]))
+[ 1,      0,        0,        0,        0,        0,        0 ],
+[ 1,     -1,      1/2,     -1/6,     1/24,   -1/120,    1/720 ],
+[ 1,     -2,        2,     -4/3,      2/3,    -4/15,     4/45 ],
+[ 1,     -3,      9/2,     -9/2,     27/8,    81/40,    81/80 ],
+[ 1,     -4,        8,    -32/3,     32/3,  -128/15,   256/45 ],
+[ 1,     -5,     25/2,   -125/6,   625/24,  -625/24, 3125/144 ]]))
 
 # create window
 win = pg.GraphicsWindow()
