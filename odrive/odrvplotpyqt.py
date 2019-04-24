@@ -36,7 +36,7 @@ def odrvSetup(connect):
       odrv.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
       while odrv.axis0.current_state != AXIS_STATE_IDLE:
          sleep(.1)
-      # handle errors that may occur in setup sequence 
+      # handle errors that may occur in setup sequence
       if odrv.axis0.error:
          if odrv.axis0.encoder.error:
             print("Encoder error!")
@@ -55,7 +55,7 @@ def odrvSetup(connect):
       print("Enabling voltage control...")
       # set control mode to voltage control we can measure amps from this mode
       odrv.axis0.controller.config.control_mode = CTRL_MODE_VOLTAGE_CONTROL
-      
+
       print("Enabled")
       print("Enabling closed loop control...")
       # enable closed loop control allowing ability to send commands to odrive
@@ -65,7 +65,7 @@ def odrvSetup(connect):
       return odrv
 
 
-# logFile() 
+# logFile()
 #
 # checks if logs directory exists and creates it if it doesnt. then safely makes
 # a new logfile that data will be outputted to.
@@ -99,9 +99,9 @@ def calcAll(logfile, t0, odrv):
    data[0] = monotonic() - t0
    # get new values
    data[1] = calcTorque(data[0], odrv)
-   data[2] = calcAccel(odrv)
-   data[3] = calcPos(odrv)
-   data[4] = calcVel(odrv)
+   data[2] = calcPos(odrv)
+   data[3] = calcVel(odrv)
+   data[4] = calcAccel(odrv)
    # create a string of format 'time,torque,accel,pos,vel' with newline
    val = ""
    for i in range(5):
@@ -123,7 +123,7 @@ def calcAll(logfile, t0, odrv):
 # called by calcAll, returns torque
 def calcTorque(t, odrv):
    # calculate a voltage based on sine wave
-   voltage = 5 * sin(t)
+   voltage = 10 * sin(t)
    # set odrv to calculated voltage
    if (odrv != 0):
       odrv.axis0.controller.current_setpoint = voltage
@@ -131,7 +131,7 @@ def calcTorque(t, odrv):
    I = voltage / 11
    # calculate torque T = 8.269933431 * I / motor_kv
    T = 8.269933431 * I / 41
-   
+
    return T
 
 
@@ -142,7 +142,7 @@ def calcVel(odrv):
    if (odrv == 0):
       return 0
    # grab value that odrv calculates in encoder counts per second
-   velcps = odrv.axis0.motor.rotor.pll_vel
+   velcps = odrv.axis0.encoder.vel_estimate
    # convert to rad per second
    velrad = velcps * 2 * np.pi / 8192
    return velrad
@@ -154,7 +154,15 @@ def calcVel(odrv):
 def calcAccel(odrv):
    if (odrv == 0 ):
       return 0
-   return 0
+   # create empy matrix and place 7 most recent position points
+   P = np.empty((7,1))
+   for r in range(-1, -8, -1):
+      P[r,0] = data["pos"][r]
+   # multiply by COEFS to get derivative estimates
+   Derivs = P * COEFS
+   # Derivs stores pos, vel, accel, jerk, snap, crackle, pop
+   accel = Derivs[2,0]
+   return accel
 
 
 # calcPos
@@ -176,7 +184,7 @@ def calcPos(odrv):
 def update():
    newData = calcAll(logfile, t0, odrv)
    # add new data to list and get rid of the oldest data
-   tags = ["time","torque","accel","vel", "pos"]
+   tags = ["time","torque","pos","vel", "accel"]
    for j in range(5):
       data[tags[j]][0] = newData[j]
       data[tags[j]] = np.roll(data[tags[j]],-1)
@@ -190,7 +198,16 @@ def update():
 # connect to odrive if non zero, otherwise simulate torque
 odrv = odrvSetup(0)
 
-# create window 
+# create matrix of inverse of coefficients of 7th degree taylor polynomial
+COEFS = np.linalg.pinv(np.array([
+[1,  0, 0,     0,     0,       0,      0       ],
+[1, -1, 1/2,  -1/6,   1/24,   -1/120,  1/720   ],
+[1, -2, 2,    -4/3,   2/3,    -4/15,   4/45    ],
+[1, -3, 9/2,  -9/2,   27/8,    81/40,  81/80   ],
+[1, -4, 8,    -32/3,  32/3,   -128/15, 256/45  ],
+[1, -5, 25/2, -125/6, 625/24, -625/24, 3125/144]]))
+
+# create window
 win = pg.GraphicsWindow()
 win.setWindowTitle("ODrive")
 
@@ -205,16 +222,16 @@ data = {
 
 # add plots to window and set appropriate ranges
 p1 = win.addPlot()
-p1.setYRange(-0.1, 0.1)
+p1.setYRange(-0.3, 0.3)
 p1.setTitle("Torque (nm)")
 
 p2 = win.addPlot()
-p2.setYRange(-0.1, 0.1)
+p2.setYRange(-100, 100)
 p2.setTitle("Position (rad)")
 
 win.nextRow()
 p3 = win.addPlot()
-p3.setYRange(-0.1, 0.1)
+p3.setYRange(-100, 100)
 p3.setTitle("Velocity (rad/s)")
 
 p4 = win.addPlot()
@@ -228,7 +245,7 @@ curve3 = p3.plot(data["time"], data["vel"])
 curve4 = p4.plot(data["time"], data["accel"])
 
 # get logfile
-logfile = logFile() 
+logfile = logFile()
 
 # record time 0
 t0 = monotonic()
@@ -241,9 +258,9 @@ timer.timeout.connect(update)
 timer.start(UPDATE_INTERVAL)
 
 # start application
-QtGui.QApplication.instance().exec_()   
+QtGui.QApplication.instance().exec_()
 
 #if __name__ == '__main__':
 #   import sys
 #   if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-#      QtGui.QApplication.instance().exec_()   
+#      QtGui.QApplication.instance().exec_()
