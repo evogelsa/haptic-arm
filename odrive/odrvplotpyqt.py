@@ -4,6 +4,7 @@ from os.path import isfile, isdir
 from os import mkdir
 from math import sin
 from time import sleep, monotonic
+from sys import argv
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as np
@@ -194,12 +195,26 @@ def update():
    curve1.setData(data["time"], data["torque"])
    curve2.setData(data["time"], data["pos"])
    curve3.setData(data["time"], data["vel"])
+   # use savgol filter to smooth data for plot
    accelSmooth = savgol_filter(data["accel"], 21, 3)
    curve4.setData(data["time"], accelSmooth)
 
 
-# connect to odrive if non zero, otherwise simulate torque
-odrv = odrvSetup(1)
+try:
+   if int(argv[1]) == 1:
+      odrv = odrvSetup(1)
+   elif int(argv[1]) == 0:
+      odrv = odrvSetup(0)
+   else:
+      print("Warning: Argument of 0 or 1 should be provided to specify connection type to ODrive")
+      print("0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
+      sleep(.5)
+      odrv = odrvSetup(0)
+except:
+   print("Warning: Argument of 0 or 1 should be provided to specify connection type to ODrive")
+   print("0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
+   sleep(.5)
+   odrv = odrvSetup(0)
 
 # create matrix of inverse of coefficients of 7th degree taylor polynomial
 COEFS = np.linalg.pinv(np.array([
