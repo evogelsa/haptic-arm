@@ -5,7 +5,6 @@ from os import mkdir
 import math
 import time
 import numpy as np
-import pyformulas as pf
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib import style
@@ -33,7 +32,7 @@ def odrvSetup(connect):
       odrv.axis0.requested_state = AXIS_STATE_FULL_CALIBRATION_SEQUENCE
       while odrv.axis0.current_state != AXIS_STATE_IDLE:
          time.sleep(.1)
-      # handle errors that may occur in setup sequence 
+      # handle errors that may occur in setup sequence
       if odrv.axis0.error:
          if odrv.axis0.encoder.error:
             print("Encoder error!")
