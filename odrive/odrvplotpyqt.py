@@ -14,7 +14,7 @@ from odrive.enums import *
 
 
 # Constants: interval to update data at, size set to show one period
-UPDATE_INTERVAL = 20 #milliseconds
+UPDATE_INTERVAL = 1000 / 50 #milliseconds
 ARRAY_SIZE = round(2000 * np.pi / UPDATE_INTERVAL)
 
 
@@ -210,6 +210,9 @@ try:
       print("0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
       sleep(.5)
       odrv = odrvSetup(0)
+   print("0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
+   sleep(.5)
+   odrv = odrvSetup(0)
 except:
    print("Warning: Argument of 0 or 1 should be provided to specify connection type to ODrive")
    print("0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
