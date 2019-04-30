@@ -1,11 +1,11 @@
 # RothLab
 
-### ODrive  
+### ODrive
 
 
 | Script           | Description                                |
 | ---------------- | ------------------------------------------ |
-| odrvcosine.py    | cosine wave using pos control              | 
+| odrvcosine.py    | cosine wave using pos control              |
 | odrvmusic.py     | tried to make diff freqs using vel control |
 | odrv.py          | default odrive test script                 |
 | odrvsine.py      | sine wave using pos control                |
