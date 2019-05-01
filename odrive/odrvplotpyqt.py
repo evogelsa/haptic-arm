@@ -5,6 +5,7 @@ from os import mkdir
 from math import sin
 from time import sleep, monotonic
 from sys import argv
+from warnings import warn
 from pyqtgraph.Qt import QtCore, QtGui
 import pyqtgraph as pg
 import numpy as np
@@ -13,9 +14,13 @@ import odrive
 from odrive.enums import *
 
 
+np.set_printoptions(precision = 3, suppress = True)
+
 # Constants: interval to update data at, size set to show one period
 UPDATE_INTERVAL = 1000 / 50 #milliseconds
-ARRAY_SIZE = round(2000 * np.pi / UPDATE_INTERVAL)
+ARRAY_SIZE      = round(2000 * np.pi / UPDATE_INTERVAL)
+NUM_DATA_POINTS = 3
+NUM_PARAMS      = 5
 
 
 # odrvSetup(connect)
@@ -101,7 +106,7 @@ def calcAll(logfile, t0, odrv):
    data[0] = monotonic() - t0
    # get new values
    data[1] = calcTorque(data[0], odrv)
-   data[2] = calcPos(odrv)
+   data[2] = calcPos(data[0], odrv)
    data[3] = calcVel(odrv)
    data[4] = calcAccel(odrv)
    # create a string of format 'time,torque,accel,pos,vel' with newline
@@ -142,11 +147,18 @@ def calcTorque(t, odrv):
 #
 def calcVel(odrv):
    if (odrv == 0):
-      return 0
-   # grab value that odrv calculates in encoder counts per second
-   velcps = odrv.axis0.encoder.vel_estimate
-   # convert to rad per second
-   velrad = velcps * 2 * np.pi / 8192
+      P = np.empty((NUM_DATA_POINTS, 1))
+      for r in range(0, NUM_DATA_POINTS):
+         P[r,0] = data["pos"][-r - 1]
+      # multiply by COEFS to get derivative estimates
+      derivs = np.matmul(COEFS,P)
+      velrad = derivs[1,0]
+   else:
+      # grab value that odrv calculates in encoder counts per second
+      velcps = odrv.axis0.encoder.vel_estimate
+      # convert to rad per second
+      velrad = velcps * 2 * np.pi / 8192
+
    return velrad
 
 
@@ -154,30 +166,31 @@ def calcVel(odrv):
 #
 #
 def calcAccel(odrv):
-   if (odrv == 0):
-      return 0
    # create empy matrix and place 7 most recent position points
-   P = np.empty((6,1))
-   for r in range(0,6):
+   P = np.empty((NUM_DATA_POINTS, 1))
+   for r in range(0, NUM_DATA_POINTS):
       P[r,0] = data["pos"][-r - 1]
    # multiply by COEFS to get derivative estimates
-   Derivs = np.dot(COEFS, P)
-   # Derivs stores pos, vel, accel, jerk, snap, crackle, pop
-   print(Derivs)
-   accel = Derivs[2,0]
+   derivs = np.matmul(COEFS,P)
+   print(derivs)
+   accel = derivs[2,0]
+
    return accel
 
 
 # calcPos
 #
 #
-def calcPos(odrv):
+def calcPos(t, odrv):
    if (odrv == 0):
-      return 0
-   # odrv records shadow count = encoder counts + revolutions * counts/rev
-   counts = odrv.axis0.encoder.shadow_count
+      # generate random count
+      counts = 50000 * sin(t)
+   else:
+      # odrv records shadow count = encoder counts + revolutions * counts/rev
+      counts = odrv.axis0.encoder.shadow_count
    # convert counts to rads
    rad = counts * 2 * np.pi / 8192
+
    return rad
 
 
@@ -197,36 +210,41 @@ def update():
    curve3.setData(data["time"], data["vel"])
    # use savgol filter to smooth data for plot
    accelSmooth = savgol_filter(data["accel"], 21, 3)
-   curve4.setData(data["time"], accelSmooth)
+   curve4.setData(data["time"], data["accel"])
 
 
 try:
    if int(argv[1]) == 1:
-      odrv = odrvSetup(1)
+      connect = 1
    elif int(argv[1]) == 0:
-      odrv = odrvSetup(0)
+      connect = 0
    else:
-      print("Warning: Argument of 0 or 1 should be provided to specify connection type to ODrive")
-      print("0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
-      sleep(.5)
-      odrv = odrvSetup(0)
-   print("0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
-   sleep(.5)
-   odrv = odrvSetup(0)
+      warn("\n\tWarning: Argument of 0 or 1 should be provided to specify connection type to ODrive"
+           + "\n\t0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
+      connect = 0
+      sleep(1)
 except:
-   print("Warning: Argument of 0 or 1 should be provided to specify connection type to ODrive")
-   print("0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
-   sleep(.5)
-   odrv = odrvSetup(0)
+   warn("\n\tWarning: Argument of 0 or 1 should be provided to specify connection type to ODrive"
+        + "\n\t0: Run program without connecting. 1: Connect to ODrive first. Default: 0")
+   connect = 0
+   sleep(1)
 
-# create matrix of inverse of coefficients of 7th degree taylor polynomial
-COEFS = np.linalg.pinv(np.array([
-[ 1,      0,        0,        0,        0,        0,        0 ],
-[ 1,     -1,      1/2,     -1/6,     1/24,   -1/120,    1/720 ],
-[ 1,     -2,        2,     -4/3,      2/3,    -4/15,     4/45 ],
-[ 1,     -3,      9/2,     -9/2,     27/8,    81/40,    81/80 ],
-[ 1,     -4,        8,    -32/3,     32/3,  -128/15,   256/45 ],
-[ 1,     -5,     25/2,   -125/6,   625/24,  -625/24, 3125/144 ]]))
+odrv = odrvSetup(connect)
+
+# create matrix of inverse of coefficients of 6th degree taylor polynomial
+# KNOWN = np.linalg.pinv(np.array([
+# [1,      0,        0,        0,        0,        0],   #      0 ],
+# [1,     -1,      1/2,     -1/6,     1/24,   -1/120],   #  1/720 ],
+# [1,     -2,        2,     -4/3,      2/3,    -4/15],   #   4/45 ],
+# [1,     -3,      9/2,     -9/2,     27/8,    -81/40],   #  81/80 ],
+# [1,     -4,        8,    -32/3,     32/3,  -128/15],   # 256/45 ],
+# [1,     -5,     25/2,   -125/6,   625/24,  -625/24]])) # , 3125/144 ]]))
+
+COEFS = np.empty((NUM_DATA_POINTS, NUM_PARAMS))
+for row in range(NUM_DATA_POINTS):
+   for col in range(NUM_PARAMS):
+      COEFS[row, col] = ((-row)**col) / np.math.factorial(col)
+COEFS = np.linalg.pinv(COEFS)
 
 # create window
 win = pg.GraphicsWindow()
@@ -251,6 +269,7 @@ p2.setYRange(-100, 100)
 p2.setTitle("Position (rad)")
 
 win.nextRow()
+
 p3 = win.addPlot()
 p3.setYRange(-100, 100)
 p3.setTitle("Velocity (rad/s)")
@@ -280,8 +299,3 @@ timer.start(UPDATE_INTERVAL)
 
 # start application
 QtGui.QApplication.instance().exec_()
-
-#if __name__ == '__main__':
-#   import sys
-#   if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
-#      QtGui.QApplication.instance().exec_()
