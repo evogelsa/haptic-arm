@@ -8,11 +8,11 @@ from matplotlib import style
 import odrive
 from odrive.enums import *
 
- 
+
 # torqueSine(data_file_path, init_time)
-# 
+#
 # This function calculates a voltage to apply to the motor based on a sine wave
-# Function writes a pair of coordinates for time and the calculated torque at 
+# Function writes a pair of coordinates for time and the calculated torque at
 # that time to the file provided to the function. The time is the current time
 # minus the initialization time
 #
@@ -20,8 +20,8 @@ def setTorque(torquefile, t0, tor, odrv):
    # get time difference since start of program
    t = time.monotonic() - t0
    # limit torque to .2
-   tor = .2 if tor > .2 else tor 
-   tor = -.2 if tor < -.2 else tor 
+   tor = .2 if tor > .2 else tor
+   tor = -.2 if tor < -.2 else tor
    # calculate a current based on provided torque
    I = tor * 41 / 8.269933431
    # calculate voltage from current
@@ -56,7 +56,7 @@ def calcInputs(alphafile, odrv):
       # calc change in encoder counts "delta count"
       dc = c2 - c1
       # convert counts to degrees
-      deg = dc * 360 / 8192 
+      deg = dc * 360 / 8192
       # convert degrees to radians
       theta = deg * math.pi / 180
       # store two measurements of angular vel inside omegas
@@ -141,10 +141,10 @@ def plotSetup():
 #
 # animate is called by FuncAnimation which passes in above args. This function
 # reads in data from the files and plots it on the live plot. Data is trimmed
-# to only show the last 200 values. The the time window is determined by the 
-# amount of data trimemed * the interval of measurements. I.e. measurements 
+# to only show the last 200 values. The the time window is determined by the
+# amount of data trimemed * the interval of measurements. I.e. measurements
 # every 10 ms * 200 data points = 2 seconds of data shown on the plot
-# 
+#
 def animate(i,t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,tor):
    # run torque sine to generate new point and write to file
    setTorque(torquefile, t0, tor, odrv)
@@ -177,7 +177,7 @@ def animate(i,t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,tor):
    X = X[-200:]
    A = A[-200:]
    # clear the old stuff from graph
-   ax1.clear() 
+   ax1.clear()
    ax2.clear()
    # set current axis to ax1
    plot.sca(ax1)
@@ -198,7 +198,7 @@ def animate(i,t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,tor):
 
 # odrvSetup()
 #
-# odrvSetup() is called at beginning of program and initializes the odrive. A 
+# odrvSetup() is called at beginning of program and initializes the odrive. A
 # full calibration routine is run and the control mode is set appropriately.
 # Returns the odrive object
 #
@@ -231,7 +231,7 @@ def odrvSetup():
    print("Enabling voltage control...")
    # set control mode to voltage control we can measure amps from this mode
    odrv.axis0.controller.config.control_mode = CTRL_MODE_VOLTAGE_CONTROL
-   
+
    print("Enabled")
    print("Enabling closed loop control...")
    # enable closed loop control which makes us able to send commands to odrive
@@ -250,14 +250,14 @@ def main():
    odrv = odrvSetup()
    # setup plot
    fig, ax1, ax2, torquefile, X, Y, A, alphafile = plotSetup()
-   # prompt for torque 
+   # prompt for torque
    tor = float(input("Enter torque no greater than .2: "))
    # set our starting time to current sys time, used for calculating time passed
    t0 = time.monotonic()
    print("Performing sine wave...")
-   # print formatted headers 
+   # print formatted headers
    print("%-9s | %-9s | %-9s | %-9s" %(" Time","Volts","Current","Torque"))
-   # animation function takes figure to use, func for animation, update interval 
+   # animation function takes figure to use, func for animation, update interval
    ani = animation.FuncAnimation(fig,animate,fargs=(t0,X,Y,A,torquefile,alphafile,odrv,ax1,ax2,tor),interval=20)
    # show our plot
    plot.show()
