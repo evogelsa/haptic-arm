@@ -19,8 +19,8 @@ np.set_printoptions(precision = 3, suppress = True)
 # Constants: interval to update data at, size set to show one period
 UPDATE_INTERVAL = 1000 / 50 #milliseconds
 ARRAY_SIZE      = round(2000 * np.pi / UPDATE_INTERVAL)
-NUM_DATA_POINTS = 3
-NUM_PARAMS      = 5
+NUM_DATA_POINTS = 6
+NUM_PARAMS      = 3
 
 
 # odrvSetup(connect)
@@ -209,7 +209,8 @@ def update():
    curve2.setData(data["time"], data["pos"])
    curve3.setData(data["time"], data["vel"])
    # use savgol filter to smooth data for plot
-   accelSmooth = savgol_filter(data["accel"], 21, 3)
+   # accelSmooth = savgol_filter(data["accel"], 21, 3)
+   # curve4.setData(data["time"], accelSmooth)
    curve4.setData(data["time"], data["accel"])
 
 
@@ -240,10 +241,13 @@ odrv = odrvSetup(connect)
 # [1,     -4,        8,    -32/3,     32/3,  -128/15],   # 256/45 ],
 # [1,     -5,     25/2,   -125/6,   625/24,  -625/24]])) # , 3125/144 ]]))
 
+# create an n by m matrix defined by constants at top of file. calculates the
+# coefficients that are in front of the derivatives as defined by taylor series
 COEFS = np.empty((NUM_DATA_POINTS, NUM_PARAMS))
 for row in range(NUM_DATA_POINTS):
    for col in range(NUM_PARAMS):
       COEFS[row, col] = ((-row)**col) / np.math.factorial(col)
+# take pseudo inverse of coefs to later be multiplied by data to get derivs
 COEFS = np.linalg.pinv(COEFS)
 
 # create window
