@@ -1,5 +1,4 @@
 #Author: Ethan Vogelsang
-#Last Modified: 04/03/2019
 from os.path import isfile, isdir
 from os import mkdir
 from math import sin
@@ -19,7 +18,7 @@ np.set_printoptions(precision = 3, suppress = True)
 # Constants: interval to update data at, size set to show one period
 UPDATE_INTERVAL = 1000 / 50 #milliseconds
 ARRAY_SIZE      = round(2000 * np.pi / UPDATE_INTERVAL)
-NUM_DATA_POINTS = 6
+NUM_DATA_POINTS = 10
 NUM_PARAMS      = 3
 
 
