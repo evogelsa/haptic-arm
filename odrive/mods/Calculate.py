@@ -28,9 +28,9 @@ def torque(odrv0, axis):
 # grab position of specified axis
 def position(odrv0, axis):
     if axis == 0:
-        return odrv0.axis0.controller.pos_setpoint
+        return odrv0.axis0.encoder.shadow_count
     elif axis == 1:
-        return odrv0.axis1.controller.pos_setpoint
+        return odrv0.axis1.encoder.shadow_count
     else:
         raise Exception("Trying to calculate position of nonexistant axis %d"
                         %axis)
