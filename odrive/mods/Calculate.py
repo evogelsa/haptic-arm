@@ -48,3 +48,9 @@ def velocity(odrv0, axis):
     else:
         raise Exception("Trying to calculate velocity of nonexistant axis %d"
                         %axis)
+
+def counts_to_rad(counts):
+    return counts * 2 * 14 / 24 * np.pi / 8192
+
+def rad_to_xy(rad1, rad2):
+    pass
