@@ -20,5 +20,7 @@ for actual experiments and project based goals
 | inverse kinematics | mapping of x y to thetas                      |
 | jacobian           | partial of forward kinematics / partial theta |
 | inverse jacobian   | inverse of jacobian matrix                    |
-
-
+| configuration      | the angles describing arm state               |
+| theta              | encoder angles in units of radians            |
+| counts             | encoder angles in units of encoder counts     |
+| x,y                | end effector coordinates in units of meters   |
