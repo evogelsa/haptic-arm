@@ -50,7 +50,7 @@ def velocity(odrv0, axis):
                         %axis)
 
 def counts_to_rad(counts):
-    return counts * 2 * 14 / 24 * np.pi / 8192
+    return counts * 2 * np.pi / 8192
 
 def rad_to_xy(rad1, rad2):
     pass
