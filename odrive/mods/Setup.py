@@ -185,6 +185,8 @@ def theta_calibrate(odrv0, axes):
         print("Calibration complete")
 
         return cnt_per_rad0, cnt_per_rad1
+    else:
+        raise Exception("Theta calibration only currently supports both axes")
 
 
 def tune_pid(odrv0, axis):
