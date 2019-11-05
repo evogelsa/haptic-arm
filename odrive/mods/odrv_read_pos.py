@@ -4,8 +4,9 @@ import numpy as np
 from time import sleep
 
 # define constants
-l1 = .1225
-l2 = .1225
+arm = Setup.arm('greece')
+l1 = arm.l1
+l2 = arm.l2
 
 odrv0 = Setup.setup('both', [3,3], 'none')
 Setup.clear_error(odrv0, 'both')
