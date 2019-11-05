@@ -138,6 +138,7 @@ def calibrate(odrv0, axes):
         raise Exception("Error with specified axes for calibration, check"
                         + " arguments")
 
+
 def theta_calibrate(odrv0, axes):
     """
     Calibrate the encoder counts to difference in theta using physical
