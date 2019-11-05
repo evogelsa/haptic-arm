@@ -12,7 +12,7 @@ l2 = arm.l2
 
 # initialize odrive in pos control mode
 mode = CTRL_MODE_POSITION_CONTROL
-odrv0 = Setup.setup('both', [mode, mode], 'none')
+odrv0 = Setup.setup('both', [mode, mode], 'both')
 
 # get zero pos
 input("Move ODrive to \"zero\" position and press enter")
@@ -99,12 +99,15 @@ while True:
     # get end pos with kinematic equations
     x, y = fwd_kinematics(theta0, theta1)
 
+
     # calculate change in and and y to get to waypoint
     delta_x, delta_y = waypoints[cur_wp] - np.array([x, y])
 
     # calculate change in theta from change in x and y
-    delta_theta0, delta_theta1 = (inv_jacobian(theta0, theta1) *
-                                  np.array([delta_x, delta_y]))
+    delta_thetas = np.matmul(inv_jacobian(theta0, theta1),
+                             np.array([[delta_x], [delta_y]]))
+    delta_theta0 = delta_thetas[0]
+    delta_theta1 = delta_thetas[1]
 
     # get new thetas to move to
     n_theta0 = theta0 + delta_theta0
@@ -122,6 +125,9 @@ while True:
 
     # start loop to check if we are close enough to move to next wp yet
     while not in_range:
+        print("Current pos: (%f, %f) | Next WP: (%f, %f)" %(x, y,
+               waypoints[cur_wp, 0], waypoints[cur_wp, 1]))
+
         # get current config in counts
         count0 = Calculate.position(odrv0, 0)
         count1 = Calculate.position(odrv0, 1)
@@ -133,8 +139,8 @@ while True:
         x, y = fwd_kinematics(theta0, theta1)
 
         # check if current position is within margin of error for desired wp
-        if ((waypoints[cur_wp, 0] - x < .005) and
-            (waypoints[cur_wp, 1] - y < .005)):
+        if ((abs(waypoints[cur_wp, 0] - x) < .001) and
+            (abs(waypoints[cur_wp, 1] - y) < .001)):
             # if it is set in range to true
             in_range = True
         else:
