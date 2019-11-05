@@ -21,6 +21,22 @@ def _convert_text(var):
     return var
 
 
+class arm():
+    """
+    Arm class to handle different arm parameters as versions change
+    """
+    def __init__(self, version = 'Greece'):
+        version = str(version).upper()
+        if version == 'GREECE':
+            self.l1 = .1225
+            self.l2 = .1225
+            self.version = 'GREECE'
+        else:
+            self.l1 = .1225
+            self.l2 = .1225
+            self.version = 'GREECE'
+
+
 def setup(axes = 2, ctrl_modes = [0,0], calib = 2):
     """
     Modular function to connect to odrive device. Parameters specify whether
