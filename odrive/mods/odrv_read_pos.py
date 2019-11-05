@@ -13,49 +13,49 @@ Setup.clear_error(odrv0, 'both')
 # get zero pos
 input("Move ODrive to \"zero\" position and press enter")
 
-theta1_zero = Calculate.position(odrv0, 0)
-theta2_zero = Calculate.position(odrv0, 1)
+count0_zero = Calculate.position(odrv0, 0)
+count1_zero = Calculate.position(odrv0, 1)
 
 # get cal pos
 input("Move ODrive to \"calibration\" position and press enter")
 
-theta1_cal = Calculate.position(odrv0, 0)
-theta2_cal = Calculate.position(odrv0, 1)
+count0_cal = Calculate.position(odrv0, 0)
+count1_cal = Calculate.position(odrv0, 1)
 
 # get delta angle
-delta_angle1 = int(input("Input change in angle1 (degrees): "))
-delta_angle2 = int(input("Input change in angle2 (degrees): "))
+theta0_dif = float(input("Input change in angle1 (degrees): ")) * np.pi / 180
+theta1_dif = float(input("Input change in angle2 (degrees): ")) * np.pi / 180
 
 # get dif in pos
-delta_theta1 = theta1_cal - theta1_zero
-delta_theta2 = theta2_cal - theta2_zero
+count0_dif = count0_cal - count0_zero
+count1_dif = count1_cal - count1_zero
 
-print(delta_theta1)
-print(delta_theta2)
+print(count0_dif)
+print(count1_dif)
 
 # counts per degree
-cnt_per_deg1 = delta_theta1 / delta_angle1
-cnt_per_deg2 = delta_theta2 / delta_angle2
+cnt_per_rad0 = count0_dif / theta0_dif
+cnt_per_rad1 = count1_dif / theta1_dif
 
-print(cnt_per_deg1)
-print(cnt_per_deg2)
+print(cnt_per_rad0)
+print(cnt_per_rad1)
 
 # loop to poll for pos
 while True:
-    pos1 = Calculate.position(odrv0, 0) - theta1_zero
-    pos2 = Calculate.position(odrv0, 1) - theta2_zero
+    count0 = Calculate.position(odrv0, 0) - count0_zero
+    count1 = Calculate.position(odrv0, 1) - count1_zero
 
-    theta1 = Calculate.counts_to_rad(pos1)
-    theta2 = Calculate.counts_to_rad(pos2)
+    theta0 = count0 / cnt_per_rad0
+    theta1 = count1 / cnt_per_rad1
 
-    print("Angle1 deg: %.2f" %(pos1 / cnt_per_deg1))
-    print("Angle2 deg: %.2f" %(pos2 / cnt_per_deg2))
+    print("Angle1 rad: %.2f" %(count0 / cnt_per_rad0))
+    print("Angle2 rad: %.2f" %(count1 / cnt_per_rad1))
 
-    print("Angle1 rad2deg: %.2f" %(theta1 * 180 / np.pi))
-    print("Angle2 rad2deg: %.2f" %(theta2 * 180 / np.pi))
+    print("Angle1 rad2deg: %.2f" %(theta0 * 180 / np.pi))
+    print("Angle2 rad2deg: %.2f" %(theta1 * 180 / np.pi))
 
-    x = l1*np.cos(theta1) + l2*np.cos(theta2)
-    y = l1*np.sin(theta1) + l2*np.sin(theta2)
+    x = l1*np.cos(theta0) + l2*np.cos(theta1)
+    y = l1*np.sin(theta0) + l2*np.sin(theta1)
 
     print("x: %.4f" %x)
     print("y: %.4f" %y)
