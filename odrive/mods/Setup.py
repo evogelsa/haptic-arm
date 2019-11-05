@@ -1,3 +1,4 @@
+import Calculate
 from time import sleep
 import odrive
 from odrive.enums import *
@@ -136,6 +137,54 @@ def calibrate(odrv0, axes):
     else:
         raise Exception("Error with specified axes for calibration, check"
                         + " arguments")
+
+def theta_calibrate(odrv0, axes):
+    """
+    Calibrate the encoder counts to difference in theta using physical
+    calibration bracket
+    """
+    axes = _convert_text(axes)
+
+    print("Reading count configuration for zero state...")
+    if axes == 2:
+        count0_zero = Calculate.position(odrv0, 0)
+        count1_zero = Calculate.position(odrv0, 1)
+
+        print("Move encoders in the positive (counterclockwise) direction by" +
+              " 30 degrees to second calibration detent. Calibration will" +
+              " resume 5 seconds after the device detects movement.")
+
+        has_moved = False
+        while not has_moved:
+            temp0 = Calculate.position(odrv0, 0)
+            temp1 = Calculate.position(odrv0, 1)
+
+            dif0 = abs(count0_zero - temp0)
+            dif1 = abs(count1_zero - temp1)
+
+            if (dif0 > 300) and (dif1 > 300):
+                has_moved = True
+            else:
+                sleep(.005)
+
+        print("Movement has been detected, resuming calibration in 5 seconds")
+        sleep(5)
+        print("Reading count configuration for 30 degrees of movement...")
+
+        count0_cal = Calculate.position(odrv, 0)
+        count1_cal = Calculate.position(odrv, 1)
+
+        theta_dif = 30 * np.pi / 180
+
+        count0_dif = count0_cal - count0_dif
+        count1_dif = count1_cal - count1_dif
+
+        cnt_per_rad0 = count0_dif / theta_dif
+        cnt_per_rad1 = count1_dif / theta_dif
+
+        print("Calibration complete")
+
+        return cnt_per_rad0, cnt_per_rad1
 
 
 def tune_pid(odrv0, axis):
