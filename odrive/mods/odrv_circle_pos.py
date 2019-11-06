@@ -47,14 +47,14 @@ print(cnt_per_rad0)
 print(cnt_per_rad1)
 
 def count2theta(count0, count1):
-    theta0 = count0 / cnt_per_rad0
-    theta1 = count1 / cnt_per_rad1
+    theta0 = (count0 - count0_zero) / cnt_per_rad0
+    theta1 = (count1 - count1_zero) / cnt_per_rad1
 
     return theta0, theta1
 
 def theta2count(theta0, theta1):
-    count0 = theta0 * cnt_per_rad0
-    count1 = theta1 * cnt_per_rad1
+    count0 = theta0 * cnt_per_rad0 + count0_zero
+    count1 = theta1 * cnt_per_rad1 + count1_zero
 
     return count0, count1
 
@@ -73,7 +73,7 @@ def inv_jacobian(theta0, theta1):
     # return inverse of jacobian
     return np.linalg.inv(jacobian(theta0, theta1))
 
-def circle_wp(center = [l1, -l2], radius = .05, num_wp = 10):
+def circle_wp(center = [l1, -l2], radius = .05, num_wp = 25):
     x = center[0]
     y = center[1]
     phi = np.linspace(0, 2 * np.pi, num_wp)
@@ -99,15 +99,14 @@ while True:
     # get end pos with kinematic equations
     x, y = fwd_kinematics(theta0, theta1)
 
-
-    # calculate change in and and y to get to waypoint
+    # calculate change in and x and y to get to waypoint
     delta_x, delta_y = waypoints[cur_wp] - np.array([x, y])
 
     # calculate change in theta from change in x and y
     delta_thetas = np.matmul(inv_jacobian(theta0, theta1),
                              np.array([[delta_x], [delta_y]]))
-    delta_theta0 = delta_thetas[0]
-    delta_theta1 = delta_thetas[1]
+    delta_theta0 = delta_thetas[0,0]
+    delta_theta1 = delta_thetas[1,0]
 
     # get new thetas to move to
     n_theta0 = theta0 + delta_theta0
@@ -139,8 +138,8 @@ while True:
         x, y = fwd_kinematics(theta0, theta1)
 
         # check if current position is within margin of error for desired wp
-        if ((abs(waypoints[cur_wp, 0] - x) < .001) and
-            (abs(waypoints[cur_wp, 1] - y) < .001)):
+        if ((abs(waypoints[cur_wp, 0] - x) < .015) and
+            (abs(waypoints[cur_wp, 1] - y) < .015)):
             # if it is set in range to true
             in_range = True
         else:
