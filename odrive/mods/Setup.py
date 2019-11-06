@@ -63,6 +63,9 @@ def setup(axes = 2, ctrl_modes = [0,0], calib = 2):
         print("No or incorrect axes specified! ODrive will not be connected")
         return 0
 
+    # Clear errors
+    clear_error(odrv0)
+
     # Add axes to list
     if axes == 2:
         Axes = [odrv0.axis0, odrv0.axis1]
@@ -96,7 +99,7 @@ def setup(axes = 2, ctrl_modes = [0,0], calib = 2):
                     print("Encoder%d error: " %(n) + hex(Axes[n].encoder.error))
                 if Axes[n].motor.error:
                     print("Motor%d error: " %(n) + hex(Axes[n].motor.error))
-                exit()
+                quit()
     elif 0 <= calib <= 1:
         if Axes[calib].error:
             print("Axis%d error: " %(n) + hex(Axes[calib].error))
@@ -198,26 +201,19 @@ def tune_pid(odrv0, axis):
     pass
 
 
-def clear_error(odrv0, axes):
+def clear_error(odrv0 = odrive.find_any()):
     """
-    Clear all errors on the provided axes
+    Clear all errors on the provided axes. If not passed odrive it will attempt
+    to connect to odrive by itself. This is slow. Returns 0 on success.
     """
-    axes = _convert_text(axes)
+    try:
+        odrv0.axis0.error = 0
+        odrv0.axis1.error = 0
+        odrv0.axis0.motor.error = 0
+        odrv0.axis1.motor.error = 0
+        odrv0.axis0.encoder.error = 0
+        odrv0.axis1.encoder.error = 0
 
-    if axes == 2:
-        odrv0.axis0.error = 0
-        odrv0.axis1.error = 0
-        odrv0.axis0.motor.error = 0
-        odrv0.axis1.motor.error = 0
-        odrv0.axis0.encoder.error = 0
-        odrv0.axis1.encoder.error = 0
-    elif axes == 1:
-        odrv0.axis1.error = 0
-        odrv0.axis1.motor.error = 0
-        odrv0.axis1.encoder.error = 0
-    elif axes == 0:
-        odrv0.axis0.error = 0
-        odrv0.axis0.motor.error = 0
-        odrv0.axis0.encoder.error = 0
-    else:
-        raise Exception("Error with clearing errors, check specified axes")
+        return 0
+    except:
+        return -1
