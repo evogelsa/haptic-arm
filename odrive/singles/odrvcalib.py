@@ -43,10 +43,13 @@ while True:
       vel_integrator_gain = float(odrv.axis0.controller.config.vel_integrator_gain)
    odrv.axis0.controller.config.vel_integrator_gain = vel_integrator_gain
 
+   pos = odrv.axis0.encoder.shadow_count
    for _ in range(3):
       print("Moving to pos 0")
-      odrv.axis0.controller.pos_setpoint = 0
+      odrv.axis0.controller.pos_setpoint = pos - 1000
       time.sleep(1)
       print("Moving to pos 10000")
-      odrv.axis0.controller.pos_setpoint = 10000
+      odrv.axis0.controller.pos_setpoint = pos + 1000
       time.sleep(1)
+
+   odrv.axis0.controller.pos_setpoint = pos

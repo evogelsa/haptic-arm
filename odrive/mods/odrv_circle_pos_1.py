@@ -15,64 +15,9 @@ l2 = arm.l2
 mode = CTRL_MODE_POSITION_CONTROL
 odrv0 = Setup.setup('both', [mode, mode], 'both')
 
-# get zero pos
-input("Move ODrive to \"zero\" position and press enter")
+arm.calibrate(odrv0)
 
-count0_zero = Calculate.position(odrv0, 0)
-count1_zero = Calculate.position(odrv0, 1)
-
-# get cal pos
-input("Move ODrive to \"calibration\" position and press enter")
-
-count0_cal = Calculate.position(odrv0, 0)
-count1_cal = Calculate.position(odrv0, 1)
-
-# get angle dif
-theta0_dif = float(input("Input change in angle1 (degrees): ")) * np.pi / 180
-theta1_dif = float(input("Input change in angle2 (degrees): ")) * np.pi / 180
-
-# get dif in pos
-count0_dif = count0_cal - count0_zero
-count1_dif = count1_cal - count1_zero
-
-# print different in counts
-print(count0_dif)
-print(count1_dif)
-
-# calculate counts per radian
-cnt_per_rad0 = count0_dif / theta0_dif
-cnt_per_rad1 = count1_dif / theta1_dif
-
-# print the counts per rad val
-print(cnt_per_rad0)
-print(cnt_per_rad1)
-
-def count2theta(count0, count1):
-    theta0 = (count0 - count0_zero) / cnt_per_rad0
-    theta1 = (count1 - count1_zero) / cnt_per_rad1
-
-    return theta0, theta1
-
-def theta2count(theta0, theta1):
-    count0 = theta0 * cnt_per_rad0 + count0_zero
-    count1 = theta1 * cnt_per_rad1 + count1_zero
-
-    return count0, count1
-
-def fwd_kinematics(theta0, theta1):
-    x = l1*np.cos(theta0) + l2*np.cos(theta1)
-    y = l1*np.sin(theta0) + l2*np.sin(theta1)
-
-    return x, y
-
-def jacobian(theta0, theta1):
-    # return array of fwd kinematic eqns
-    return np.array([[-l1 * np.sin(theta0), -l2 * np.sin(theta1)],
-                  [l1 * np.cos(theta0), l2 * np.cos(theta1)]])
-
-def inv_jacobian(theta0, theta1):
-    # return inverse of jacobian
-    return np.linalg.pinv(jacobian(theta0, theta1))
+input('Press enter when ready')
 
 def circle_wp(center = [l1, -l2], radius = .05, num_wp = N_WP):
     x = center[0]
@@ -95,16 +40,16 @@ while True:
     count1 = Calculate.position(odrv0, 1)
 
     # convert counts to radians
-    theta0, theta1 = count2theta(count0, count1)
+    theta0, theta1 = Calculate.count2theta(count0, count1, arm)
 
     # get end pos with kinematic equations
-    x, y = fwd_kinematics(theta0, theta1)
+    x, y = Calculate.fwd_kinematics(theta0, theta1, arm)
 
     # calculate change in and x and y to get to waypoint
     delta_x, delta_y = waypoints[cur_wp] - np.array([x, y])
 
     # calculate change in theta from change in x and y
-    delta_thetas = np.matmul(inv_jacobian(theta0, theta1),
+    delta_thetas = np.matmul(Calculate.inv_jacobian(theta0, theta1, arm),
                              np.array([[delta_x], [delta_y]]))
     delta_theta0 = delta_thetas[0,0]
     delta_theta1 = delta_thetas[1,0]
@@ -114,7 +59,7 @@ while True:
     n_theta1 = theta1 + delta_theta1
 
     # get new counts from new thetas
-    n_count0, n_count1 = theta2count(n_theta0, n_theta1)
+    n_count0, n_count1 = Calculate.theta2count(n_theta0, n_theta1, arm)
 
     # set odrive to move to new encoder counts
     odrv0.axis0.controller.pos_setpoint = n_count0
@@ -133,10 +78,10 @@ while True:
         count1 = Calculate.position(odrv0, 1)
 
         # convert config in counts to rad
-        theta0, theta1 = count2theta(count0, count1)
+        theta0, theta1 = Calculate.count2theta(count0, count1, arm)
 
         # get x and y from thetas
-        x, y = fwd_kinematics(theta0, theta1)
+        x, y = Calculate.fwd_kinematics(theta0, theta1, arm)
 
         # check if current position is within margin of error for desired wp
         if ((abs(waypoints[cur_wp, 0] - x) < .015) and

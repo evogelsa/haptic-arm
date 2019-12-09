@@ -22,7 +22,7 @@ def _convert_text(var):
     return var
 
 
-class arm():
+class haptic_arm():
     """
     Arm class to handle different arm parameters as versions change
     """
@@ -32,13 +32,32 @@ class arm():
             self.l1 = .1225
             self.l2 = .1225
             self.version = 'GREECE'
-        else:
-            self.l1 = .1225
-            self.l2 = .1225
-            self.version = 'GREECE'
+            self.count0_zero = None
+            self.count1_zero = None
+            self.cnt_per_rad0 = None
+            self.cnt_per_rad1 = None
+            self.calibrated = False
+
+    def calibrate(self, odrv0, version = 'GREECE'):
+        """
+        Calibrate the counts to radian for arm version
+        """
+        if version == 'GREECE':
+            input("Move Odrive to first position")
+            self.count0_zero = Calculate.position(odrv0, 0)
+            self.count1_zero = Calculate.position(odrv0, 1)
+            input("Move Odrive 30 degrees left to second position")
+            count0_cal = Calculate.position(odrv0, 0)
+            count1_cal = Calculate.position(odrv0, 1)
+            theta_dif = 30 * np.pi / 180
+            count0_dif = count0_cal - count0_zero
+            count1_dif = count1_cal - count1_zero
+            self.cnt_per_rad0 = count0_dif / theta_dif
+            self.cnt_per_rad1 = count1_dif / theta_dif
+            self.calibrated = True
 
 
-def setup(axes = 2, ctrl_modes = [0,0], calib = 2):
+def setup(axes = 2, ctrl_modes = [0,0], calib = 2, remove_errors = True):
     """
     Modular function to connect to odrive device. Parameters specify whether
     or not to run a calibration sequence, what control modes the odrive should
@@ -64,7 +83,8 @@ def setup(axes = 2, ctrl_modes = [0,0], calib = 2):
         return 0
 
     # Clear errors
-    clear_error(odrv0)
+    if remove_errors:
+        clear_error(odrv0)
 
     # Add axes to list
     if axes == 2:
@@ -115,7 +135,7 @@ def setup(axes = 2, ctrl_modes = [0,0], calib = 2):
 
 def calibrate(odrv0, axes):
     """
-    Runs calibration sequences on specified axes
+    Runs odrive calibration sequences on specified axes
     """
     axes = _convert_text(axes)
 
@@ -201,7 +221,7 @@ def tune_pid(odrv0, axis):
     pass
 
 
-def clear_error(odrv0 = odrive.find_any()):
+def clear_error(odrv0):
     """
     Clear all errors on the provided axes. If not passed odrive it will attempt
     to connect to odrive by itself. This is slow. Returns 0 on success.
