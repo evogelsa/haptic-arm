@@ -1,10 +1,18 @@
+# log files
 tout*.txt
 aout*.txt
 pout*.txt
 logout*.txt
+
+# ctags
 tags
+
+# examples provided with pyqt
 pyqtexample.py
 scrolling.py
 singleplot.py
+
+# swap files, python binaries
 *.swp
-*.pyc
+__pycache__/
+*.py[cod]
