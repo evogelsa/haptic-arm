@@ -1,4 +1,5 @@
 import Calculate
+import numpy as np
 from time import sleep
 import odrive
 from odrive.enums import *
@@ -50,8 +51,8 @@ class haptic_arm():
             count0_cal = Calculate.position(odrv0, 0)
             count1_cal = Calculate.position(odrv0, 1)
             theta_dif = 30 * np.pi / 180
-            count0_dif = count0_cal - count0_zero
-            count1_dif = count1_cal - count1_zero
+            count0_dif = count0_cal - self.count0_zero
+            count1_dif = count1_cal - self.count1_zero
             self.cnt_per_rad0 = count0_dif / theta_dif
             self.cnt_per_rad1 = count1_dif / theta_dif
             self.calibrated = True

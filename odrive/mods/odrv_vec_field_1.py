@@ -5,51 +5,11 @@ import numpy as np
 from odrive.enums import *
 
 
-class vector_field_funcs():
-    def __init__(self):
-        self.fields = {
-            'line_y': self._line_y,
-            'circle': self._circle
-        }
+# TODO
+# 1. test if velocity control works
+#   a. if velocity doesnt work convert everything to current control
+# 2. discuss different vector funcs, method correct?
 
-    def return_field(self, field, x, y):
-        return self.fields[field](x,y)
-
-    def _line_y(self, x, y):
-        x_dot = 0
-        # function of y maps y displacement to y_dot range [0 cm/s, 3 cm/s]
-        y_dot = ((y) / (l1 + l2)) * .03
-
-        return x_dot, y_dot
-
-    def _circle(self, x, y, radius = .05, buffer = .005):
-        # make circle w/ 5cm radius but give +- 1cm buffer zone
-        outter = radius + buffer
-        inner = radius - buffer
-        # give circle center of arm lengths
-        center_x = l1
-        center_y = l1
-
-        # vel is value mapped linearly with displacement from center of the
-        # circle to range of 0 cm/s to 3 cm/s
-        # (map pos to center) / (max val) * (max vel)
-        if ((x - center_x) > outter):
-            x_dot = ((x - center_x) / (l1 + l2 - center_x)) * .03
-        elif ((x - center_x) < inner):
-            x_dot = ((x - center_x) / (l1 + l2 - center_x)) * .03
-        else:
-            x_dot = 0
-
-        if ((y - center_y) > outter):
-            y_dot = ((y - center_y) / (l1 + l2 - center_y)) * .03
-        elif ((y - center_y) < inner):
-            y_dot = ((y - center_y) / (l1 + l2 - center_y)) * .03
-        else:
-            y_dot = 0
-
-        return x_dot, y_dot
-
-vectors = vector_field_funcs()
 
 # instantiate arm class for version greece
 arm = Setup.haptic_arm('greece')
@@ -57,23 +17,16 @@ l1 = arm.l1
 l2 = arm.l2
 
 # initialize odrive in pos control mode
-mode = CTRL_MODE_CURRENT_CONTROL
+mode = CTRL_MODE_VELOCITY_CONTROL
 odrv0 = Setup.setup('both', [mode, mode], 'both')
 
 # run arm calibration routine
 arm.calibrate(odrv0)
 
-# get user to select vector field
-print("Select vector field: ")
-for key in vectors.fields.keys():
-    print('\t' + str(key))
-valid = False
-while not valid:
-    field = str(input("Selection: "))
-    if field not in vectors.fields.keys():
-        print("Invalid key")
-    else:
-        valid = True
+vectors = Calculate.vector_fields()
+vectors.select_field_by_user()
+# vectors.select_field_by_args('restrict_circle', radius = .05, buffer = .005,
+#                              center_x = l1, center_y = l1)
 
 # control loop
 while True:
@@ -85,10 +38,10 @@ while True:
     theta0, theta1 = Calculate.count2theta(count0, count1, arm)
 
     # get end pos with kinematic equations
-    x, y = Calculate.fwd_kinematics(theta0, theta1)
+    x, y = Calculate.fwd_kinematics(theta0, theta1, arm)
 
     # calculate x_dot y_dot for desired vector field
-    x_dot, y_dot = vectors.return_field(field, x, y)
+    x_dot, y_dot = vectors.return_field(x, y)
     X = np.array([[x_dot], [y_dot]])
 
     # use inv jacobian to get theta dots
