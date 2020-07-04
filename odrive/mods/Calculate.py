@@ -96,7 +96,7 @@ def inv_jacobian(theta0, theta1, arm):
     """
     Returns inverse of jacobian
     """
-    return np.linalg.inv(jacobian(theta0, theta1, arm))
+    return np.linalg.pinv(jacobian(theta0, theta1, arm))
 
 
 def cart2polar(x, y):
