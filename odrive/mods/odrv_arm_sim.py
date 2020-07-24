@@ -7,10 +7,17 @@ WIN_WIDTH = 800
 WIN_HEIGHT = 600
 
 class prev_key_state_t():
+    '''
+    Prev key state keeps track of the which keys were pressed each frame
+    '''
     def __init__(self):
         self.key = {}
 
 class polar_pos_t():
+    '''
+    Coordinates of window in polar form. Origin is the bottom center point
+    of the window.
+    '''
     def __init__(self, r = 0, theta = 0):
         self.r, self.theta = r, theta
     def to_cart(self):
@@ -25,6 +32,10 @@ class polar_pos_t():
         return win_pos_t(x, y)
 
 class cart_pos_t():
+    '''
+    Coordinates in cartesian form. Origin is the bottom center point of
+    simulation window.
+    '''
     def __init__(self, x = 0, y = 0):
         self.x, self.y = x, y
     def to_polar(self):
@@ -38,6 +49,10 @@ class cart_pos_t():
         return win_pos_t(x, y)
 
 class win_pos_t():
+    '''
+    Coordinates in matrix form. Origin is at top left of simulation window,
+    x coord increases moving right, y increases moving down.
+    '''
     def __init__(self, x = 0, y = 0):
         self.x, self.y = x, y
     def to_cart(self):
@@ -51,12 +66,18 @@ class win_pos_t():
         return polar_pos_t(r, theta)
 
 class mouse_state_t(win_pos_t):
+    '''
+    Mouse state keeps track of mouse clicks and cursor position
+    '''
     def __init__(self, win_pos = win_pos_t()):
         self.left_button = False
         self.right_button = False
         self.win_pos_t = win_pos
 
 def update_mouse_state():
+    '''
+    Returns a new mouse state with most recent information
+    '''
     result = mouse_state_t()
     PI = POINTER(c_int)
     mouse_button_state = SDL_GetMouseState(PI(c_int(result.win_pos_t.x)), PI(c_int(result.win_pos_t.y)))
@@ -65,20 +86,28 @@ def update_mouse_state():
     return result
 
 class color_t():
-    def __init__(self, r = 0, g = 0, b = 0):
+    '''
+    Type to hold pixel color information
+    '''
+    def __init__(self, r = 0, g = 0, b = 0, a = 0):
         self.r = r
         self.g = g
         self.b = b
+        self.a = a
 
 class arm_segment_t():
+    '''
+    Stores texture and arm segment size as well as helper functions for
+    handling the segment.
+    '''
     def __init__(
             self,
-            tex, 
-            width = 0, 
-            length = 0, 
-            ppos = polar_pos_t(0,0), 
-            rot = 0, 
-            color_t = color_t(0,0,0), 
+            tex,
+            width = 0,
+            length = 0,
+            ppos = polar_pos_t(0,0),
+            rot = 0,
+            color_t = color_t(0,0,0),
             num = 0
             ):
         self.tex = tex
@@ -89,6 +118,9 @@ class arm_segment_t():
         self.color_t = color_t
         self.num = num
     def generate(self, renderer):
+        '''
+        Creates a texture for the arm segment according to defined size
+        '''
         pixels = np.empty(self.width*self.length*4)
         for i in range(self.width*self.length):
             p = i*4
@@ -97,19 +129,25 @@ class arm_segment_t():
             pixels[p+2] = self.color_t.b
         self.tex = pixels_to_texture(renderer, pixels, self.width, self.length)
     def draw(self, renderer):
+        '''
+        Passes the texture to the renderer to draw pixels on the screen
+        '''
         wpos = self.ppos.to_win()
         x, y = wpos.x, wpos.y
         corner_x = x - self.width/2
         corner_y = y - self.length
         rect = SDL_Rect(
                 x = int(corner_x),
-                y = int(corner_y), 
-                w = int(self.width), 
+                y = int(corner_y),
+                w = int(self.width),
                 h = int(self.length)
-                ) 
-        point = SDL_Point(x = int(self.width/2), y = int(self.length))  
+                )
+        point = SDL_Point(x = int(self.width/2), y = int(self.length))
         SDL_RenderCopyEx(renderer, self.tex, None, rect, self.rot, point, 0)
     def get_end(self):
+        '''
+        Gets the center point of the edge farthest from the polar origin
+        '''
         cpos = self.ppos.to_cart()
         ox, oy = cpos.x, cpos.y
         x = np.sin(deg_to_rad(self.rot))*self.length + ox
@@ -125,6 +163,9 @@ field_t = {
         }
 
 def usr_input():
+    '''
+    Grab user input for vector field type
+    '''
     print("Possible field types:")
     print("\t(0) Circle\n\t(1) Circle Bound\n\t(2) Spiral\n\t(3) Spiral Bound")
     try:
@@ -138,11 +179,17 @@ def usr_input():
         raise
 
 class vector_field_t():
+    '''
+    Defines the different types of vector fields available
+    '''
     def __init__(self, center = cart_pos_t(0,0), desc = {}, kind = 0):
         self.center = center
         self.desc = desc
         self.kind = kind
     def define(self, arm0, arm1, selection):
+        '''
+        Change the vector field kind and set needed parameters
+        '''
         self.kind = selection
         self.desc = {}
         if selection == field_t['CIRCLE']:
@@ -164,6 +211,9 @@ class vector_field_t():
             self.desc["radius"] = arm1.length / 2
             self.desc["buffer"] = arm1.length / 20
     def update_arm(self, arm0, arm1, elapsed_time):
+        '''
+        Calculate new arm positions based on vector field and redraw accordingly
+        '''
         selection = self.kind
         if selection == field_t['CIRCLE']:
             cpos = fwd_kinematics(arm0, arm1)
@@ -228,6 +278,9 @@ class vector_field_t():
             arm1.ppos = arm0.get_end()
             arm1.rot += rad_to_deg(dtheta1) * elapsed_time
     def get_arrow_rot(self, cpos):
+        '''
+        Calculates rotation of arrows for showing vector field
+        '''
         selection = self.kind
         if selection == field_t['CIRCLE']:
             cpos = shift_origin(cpos, self.center)
@@ -262,20 +315,35 @@ class vector_field_t():
         return numpy.finfo(float).max, numpy.finfo(float).max
 
 def shift_origin(cpos, new_origin):
+    '''
+    Translate point based on new origin
+    '''
     return cart_pos_t(cpos.x - new_origin.x, cpos.y - new_origin.y)
 
 def deg_to_rad(deg):
+    '''
+    Convert degrees to radians
+    '''
     return deg * np.pi / 180
 
 def rad_to_deg(rad):
+    '''
+    Convert radians to degrees
+    '''
     return -(rad * 180 / np.pi)
 
 def fwd_kinematics(arm0, arm1):
+    '''
+    Calculate end effector position using forward kinematics
+    '''
     x = arm0.length*np.cos(deg_to_rad(arm0.rot)) + arm1.length*np.cos(deg_to_rad(arm1.rot))
     y = arm0.length*np.sin(deg_to_rad(arm0.rot)) + arm1.length*np.sin(deg_to_rad(arm1.rot))
     return cart_pos_t(x, y)
 
 def jacobian(arm0, arm1):
+    '''
+    Return jacobian matrix of arm
+    '''
     j = np.matrix(
             [[-arm0.length*np.sin(deg_to_rad(arm0.rot)), -arm1.length*np.sin(deg_to_rad(arm1.rot))],
             [arm0.length*np.cos(deg_to_rad(arm0.rot)), arm1.length*np.cos(deg_to_rad(arm1.rot))]]
@@ -283,18 +351,27 @@ def jacobian(arm0, arm1):
     return j
 
 def inv_jacobian(arm0, arm1):
+    '''
+    Invert jacobian
+    '''
     j = jacobian(arm0, arm1)
     jinv = np.linalg.pinv(j)
     return jinv
 
 def polar_to_cart_d(r, theta, dr, dtheta):
+    '''
+    Convert polar velocities to cartesian velocities
+    '''
     dx = dr*np.cos(theta) - r*np.sin(theta)*dtheta
     dy = dr*np.sin(theta) + r*np.cos(theta)*dtheta
     return dx, dy
 
 class screen_state_t():
+    '''
+    Keeps track of use selected parameters
+    '''
     def __init__(
-            self, 
+            self,
             show_center = False,
             show_field = False,
             show_trace = False,
@@ -314,6 +391,9 @@ class screen_state_t():
         self.spiral_bound = spiral_bound
 
 def bg_update(renderer, vf, arm0, arm1, screen_state, key_state, key_state_prev, pixels):
+    '''
+    update screen state to be used for drawing background texture
+    '''
     if key_state[SDL_SCANCODE_C] != 0:
         if not key_state_prev.key["c"]:
             screen_state.show_center = not screen_state.show_center
@@ -372,6 +452,9 @@ def bg_update(renderer, vf, arm0, arm1, screen_state, key_state, key_state_prev,
         key_state_prev.key["3"] = False
 
 def set_pixel(x, y, c, pixels):
+    '''
+    Set individual pixel in pixel array to given color
+    '''
     index = (y*WIN_WIDTH + x) * 4
     if index < len(pixels)-4 and index >= 0:
         pixels[index] = c.r
@@ -379,11 +462,17 @@ def set_pixel(x, y, c, pixels):
         pixels[index+2] = c.b
 
 def pixels_to_texture(renderer, pixels, width, height):
+    '''
+    Convert pixels to an sdl texture
+    '''
     tex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, width, height)
     SDL_UpdateTexture(tex, None, bytes(pixels), width*4)
     return tex
 
 def update_mouse(arm0, arm1, key_state, mouse_state, elapsed_time):
+    '''
+    handle user input for moving arm
+    '''
     if key_state[SDL_SCANCODE_A] != 0:
         arm0.rot -= 1
     if key_state[SDL_SCANCODE_D] != 0:
@@ -393,8 +482,13 @@ def update_mouse(arm0, arm1, key_state, mouse_state, elapsed_time):
     mouse_polar_adj = mouse_cart_adj.to_polar()
     arm1.ppos = arm0_end
     arm1.rot = rad_to_deg(mouse_polar_adj.theta) + 90
-    
+
 def main():
+    '''
+    Main simulation loop
+    '''
+
+    # generate two arm segments and place at default location
     cpos0 = cart_pos_t(0, 10)
     ppos0 = cpos0.to_polar()
     arm0 = arm_segment_t(tex = None, width = 20, length = 220, ppos = ppos0, rot = 0, color_t = color_t(0,255,0), num = 0)
@@ -402,16 +496,20 @@ def main():
     arm1 = arm_segment_t(tex = None, width = 20, length = 220, ppos = ppos1, rot = 110, color_t = color_t(255,0,0), num = 1)
     screen_state = screen_state_t(show_center = False, show_field = False, show_trace = False, interactive = False)
 
+    # user select a vector field
     vf = vector_field_t()
     vf.define(arm0, arm1, usr_input())
-    
+
+    # initialize sdl utility and create the window and renderer
     SDL_Init(SDL_INIT_EVERYTHING)
     window = SDL_CreateWindow(b"SCARA Arm", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_SHOWN)
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED)
-    
+
+    # init two arm segments
     arm0.generate(renderer)
     arm1.generate(renderer)
 
+    # create square to use as center of vector field marker
     square_pixels = np.empty(10*10*4)
     for i in range(10*10):
         p = i * 4
@@ -419,6 +517,7 @@ def main():
     square_tex = pixels_to_texture(renderer, square_pixels, 10, 10)
     square_rect = SDL_Rect(x = int(vf.center.to_win().x - 5), y = int(vf.center.to_win().y - 15), w = 10, h = 10)
 
+    # create arrow textures to show vector field
     arrow_mask = [
             0,1,0,
             1,1,1,
@@ -435,6 +534,7 @@ def main():
             arrow_pixels[p+2] = 255
     arrow_tex = pixels_to_texture(renderer, arrow_pixels, 3, 5)
 
+    # initialize mouse state and keyboard state
     mouse_state = update_mouse_state()
     key_state = SDL_GetKeyboardState(None)
     key_state_prev = prev_key_state_t()
@@ -446,23 +546,31 @@ def main():
     key_state_prev.key["2"] = False
     key_state_prev.key["3"] = False
 
+    # create texture for background of simulation window
     pixels = np.empty(WIN_WIDTH*WIN_HEIGHT*4)
     bg_tex = pixels_to_texture(renderer, pixels, WIN_WIDTH, WIN_HEIGHT)
 
+    # create pixels to use as traces for arm end
     traces = []
     trace_idx = 0
     trace_rect = SDL_Rect(x = -10, y = -10, w = 10, h = 10)
     for i in range(600):
         traces.append(trace_rect)
 
+    # starting time
     frame_start = time.monotonic()
 
+    # create empty event to check for window exit later
     event = SDL_Event()
 
+    # prevent initial divide by zero errors
     elapsed_time = 0.001
     while True:
+        # update frame start for elapsed time
         frame_start = time.monotonic()
         mouse_state = update_mouse_state()
+
+        # check for window exit
         while SDL_PollEvent(ctypes.byref(event)) != 0:
             if event.type == SDL_QUIT:
                 SDL_DestroyRenderer(renderer)
@@ -470,11 +578,13 @@ def main():
                 SDL_Quit()
                 return
 
+        # update arm via user control if enabled, otherwise use vector field
         if screen_state.interactive:
             update_mouse(arm0, arm1, key_state, mouse_state, elapsed_time)
         else:
             vf.update_arm(arm0, arm1, elapsed_time)
 
+        # print debug info to console
         if elapsed_time != 0:
             fps = 1/elapsed_time
         else:
@@ -487,6 +597,7 @@ def main():
             fps, elapsed_time*1000.0)
         )
 
+        # update the background and draw textures
         bg_update(renderer, vf, arm0, arm1, screen_state, key_state, key_state_prev, pixels)
         SDL_RenderCopy(renderer, bg_tex, None, None)
         if screen_state.show_center:
@@ -508,10 +619,14 @@ def main():
                     arrow_rect = SDL_Rect(x = x*50, y = y*50, w = 6, h = 10)
                     SDL_RenderCopyEx(renderer, arrow_tex, None, arrow_rect, theta, None, 0)
 
+        # draw arm over background
         arm0.draw(renderer)
         arm1.draw(renderer)
+
+        # show newly drawn frame
         SDL_RenderPresent(renderer)
 
+        # update elapsed time and delay if too fast, avoid any physics issues
         elapsed_time = time.monotonic() - frame_start
         if elapsed_time < .005:
             SDL_Delay(int(5-elapsed_time*1000))
