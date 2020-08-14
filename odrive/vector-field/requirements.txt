@@ -1,0 +1,5 @@
+PySDL2==0.9.7
+odrive==0.4.11
+numpy==1.18.2
+Calculate==1.0.0
+Setup==1.0
