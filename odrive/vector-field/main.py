@@ -7,7 +7,8 @@ arm = controller.init()
 
 # user select a vector field
 arm.vf = calculate.vector_field_t()
-arm.vf.define(arm, usr_input())
+arm.vf.usr_input()
+arm.vf.define(arm)
 
 # after vf has been selected
 sim = graphics.init(arm)

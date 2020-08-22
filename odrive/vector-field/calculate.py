@@ -79,12 +79,28 @@ class vector_field_t():
                 self.field_t['SPIRAL']      : self._spiral,
                 self.field_t['SPIRALBOUND'] : self._spiral_bound,
                 }
+        self.selection = None
 
-    def define(self, arm, selection):
+    def usr_input(self):
+        '''
+        Grab user input for vector field type
+        '''
+        print("Possible field types:")
+        print("\t(0) Circle\n\t(1) Circle Bound\n\t(2) Spiral\n\t(3) Spiral Bound")
+        try:
+            selection = int(input("Selection: "))
+            if selection > 3 or selection < 0:
+                raise ValueError('Selection out of bounds')
+            self.kind = selection
+        except:
+            raise
+
+    def define(self, arm, selection = None):
         '''
         Change the vector field kind and set needed parameters
         '''
-        self.kind = selection
+        if selection is not None:
+            self.kind = selection
         self.desc = {}
         if selection == self.field_t['CIRCLE']:
             self.center = cart_pos_t(arm.length1, arm.length0)
@@ -210,7 +226,7 @@ class vector_field_t():
                 dr *= -1
             dx, dy = polar_to_cart_d(ppos.r, ppos.theta, dr, self.desc["dtheta"])
             return dx, dy
-        return numpy.finfo(float).max, numpy.finfo(float).max
+        return np.finfo(float).max, np.finfo(float).max
 
 def shift_origin(cpos, new_origin):
     '''

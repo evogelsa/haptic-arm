@@ -90,7 +90,7 @@ class haptic_arm():
         self.arm1 = None
         self.odrv = None
 
-    def calibrate(self, odrv):
+    def calibrate(self):
         """
         Calibrate the counts to radian for arm version
         """
