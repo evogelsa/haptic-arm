@@ -5,11 +5,6 @@ import odrive
 from odrive.enums import *
 
 
-# TODO
-# 1. test if velocity control works
-#   a. if velocity doesnt work convert everything to current control
-# 2. discuss different vector funcs, method correct?
-
 def _convert_text(var):
     """
     Converts provided variable to integer form if its a string
@@ -182,10 +177,30 @@ class haptic_arm():
 
         self.odrv = odrv
 
+class arm_segment_t():
+    def __init__(self, axis, arm):
+        self.axis = axis
+        if axis == 0:
+            self.length = arm.length0
+            self.counts = arm.odrv.axis0.encoder.shadow_count
+            self.rot, _ = calculate.count_to_theta(arm, self.counts, 0)
+        elif axis == 1:
+            self.length = arm.length1
+            self.counts = arm.odrv.axis1.encoder.shadow_count
+            _, self.rot = calculate.count_to_theta(arm, 0, self.counts)
+    def update(self, arm):
+        if self.axis == 0:
+            self.counts = arm.odrv.axis0.encoder.shadow_count
+            self.rot, _ = calculate.count_to_theta(arm, self.counts, 0)
+        elif self.axis == 1:
+            self.counts = arm.odrv.axis1.encoder.shadow_count
+            _, self.rot = calculate.count_to_theta(arm, 0, self.counts)
 
 def init():
     # instantiate arm class for version greece
     arm = haptic_arm()
+    arm.arm0 = arm_segment_t(0, arm)
+    arm.arm1 = arm_segment_t(1, arm)
 
     # initialize odrive in vel control mode
     mode = CTRL_MODE_VELOCITY_CONTROL
@@ -202,6 +217,13 @@ def init():
     return arm
 
 def step(arm):
+    # update arm segment classes
+    arm.arm0.update(arm)
+    arm.arm1.update(arm)
+
+    # get end pos with kinematic equations
+    x, y = Calculate.fwd_kinematics(theta0, theta1, arm)
+
     # get dx dy for desired vector field
     X = np.array([[arm.vf.dx], [arm.vf.dy]])
 

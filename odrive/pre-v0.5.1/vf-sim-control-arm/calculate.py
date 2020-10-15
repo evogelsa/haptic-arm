@@ -102,18 +102,19 @@ class vector_field_t():
         if selection is not None:
             self.kind = selection
         self.desc = {}
+        selection = self.kind
         if selection == self.field_t['CIRCLE']:
             self.center = cart_pos_t(arm.length1, arm.length0)
             self.desc["dtheta"] = np.pi / 2
         elif selection == self.field_t['CIRCLEBOUND']:
             self.center = cart_pos_t(arm.length1, arm.length0)
-            self.desc["dr"] = arm.length1 / 8
+            self.desc["dr"] = np.pi/4
             self.desc["radius"] = arm.length1 / 2
             self.desc["buffer"] = arm.length1 / 20
         elif selection == self.field_t['SPIRAL']:
             self.center = cart_pos_t(arm.length1, arm.length0)
             self.desc["dtheta"] = np.pi / 2
-            self.desc["dr"] = arm.length1 / 8
+            self.desc["dr"] = np.pi/4
         elif selection == self.field_t['SPIRALBOUND']:
             self.center = cart_pos_t(arm.length1, arm.length0)
             self.desc["dtheta"] = np.pi / 2

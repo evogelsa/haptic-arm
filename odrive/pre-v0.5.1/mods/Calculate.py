@@ -348,10 +348,10 @@ class vector_fields():
         if axis == 'x':
             x_dot = 0
             # function of y maps y displacement to y_dot range [0 A to 1 A]
-            y_dot = _scale_velocity(y - offset, 0, l1*2, 0, .03)
+            y_dot = self._scale_velocity(y - offset, 0, l1*2, 0, .03)
         elif axis == 'y':
             # function of x maps x displacement to x_dot range [0 A to 1 A]
-            x_dot = _scale_velocity(x - offset, 0, l1*2, 0, .03)
+            x_dot = self._scale_velocity(x - offset, 0, l1*2, 0, .03)
             y_dot = 0
 
         return x_dot, y_dot
@@ -388,10 +388,10 @@ class vector_fields():
 
         if r > outter:
             vel_eq = -(r - outter)
-            r_dot = _scale_velocity(vel_eq, 0, l1*2, 0, .03)
+            r_dot = self._scale_velocity(vel_eq, 0, l1*2, 0, .03)
         elif r < inner:
             vel_eq = inner - r
-            r_dot = _scale_velocity(vel_eq, 0, l1*2, 0, .03)
+            r_dot = self._scale_velocity(vel_eq, 0, l1*2, 0, .03)
 
         theta_dot = 0
 
@@ -412,8 +412,8 @@ class vector_fields():
 
 
     def _return_to_circle(self, x, y, **kwargs):
-        x_dot0, y_dot0 = _restrict_circle(x, y, **kwargs)
-        x_dot1, y_dot1 = _make_circle(x, y, **kwargs)
+        x_dot0, y_dot0 = self._restrict_circle(x, y, **kwargs)
+        x_dot1, y_dot1 = self._make_circle(x, y, **kwargs)
 
         x_dot = x_dot0 + x_dot1
         y_dot = y_dot0 + y_dot1
