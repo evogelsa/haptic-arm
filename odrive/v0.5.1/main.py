@@ -31,8 +31,8 @@ def step(arm, vf):
     dcount1 = calculate.rad2count(arm, dtheta1, 1)
 
     # set odrive axis velocities
-    arm.odrive.axis0.controller.input_torque = dcount0
-    arm.odrive.axis1.controller.input_torque = dcount1
+    arm.odrive.axis0.controller.input_vel = dcount0
+    arm.odrive.axis1.controller.input_vel = dcount1
 
 def main():
     # instantiate a haptic device (connects to odrive)
@@ -42,7 +42,7 @@ def main():
     # use custom homing routine to define counts/angle
     arm.home()
     # setup control mode
-    arm.set_ctrl_mode_torque()
+    arm.set_ctrl_mode_velocity()
     # instantiate vector field for arm
     vf_args = {
             'xcenter': arm.arm0.length,

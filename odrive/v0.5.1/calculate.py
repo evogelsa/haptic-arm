@@ -44,8 +44,10 @@ def fwd_kinematics(arm, theta0, theta1):
     return x, y
 
 def jacobian(arm, theta0, theta1):
-    return np.array([[-arm.l1 * np.sin(theta0), -arm.l2 * np.sin(theta1)],
-                  [arm.l1 * np.cos(theta0), arm.l2 * np.cos(theta1)]])
+    return np.array([[-arm.arm0.length * np.sin(theta0),
+                      -arm.arm0.length * np.sin(theta1)],
+                    [arm.arm0.length * np.cos(theta0),
+                     arm.arm1.length * np.cos(theta1)]])
 
 def inv_jacobian(arm, theta0, theta1):
     return np.linalg.pinv(jacobian(arm, theta0, theta1))
@@ -103,10 +105,12 @@ class VectorField():
             vel_eq = -(r - outer)
             # vel_eq is linear based on distance from outer circle boundary
             # so map this to a reasonable range for the velocity
-            dr = map(vel_eq, 0, arm.arm0.length+arm.arm1.length, 0, 0.03)
+            dr = map(vel_eq, 0, self.arm.arm0.length +
+                     self.arm.arm1.length, 0, 0.03)
         elif r < inner:
             vel_eq = inner - r
-            dr = map(vel_eq, 0, arm.arm0.length+arm.arm1.length, 0, 0.03)
+            dr = map(vel_eq, 0, self.arm.arm0.length +
+                     self.arm.arm1.length, 0, 0.03)
 
         dx, dy = dpolar2cart(r, theta, dr, 0)
         return dx, dy
