@@ -124,7 +124,7 @@ class SDLWrapper():
         # make the window visible and start simulation loop
         self.window.show()
 
-    def text(self, text: list[list], size=16):
+    def text(self, text: list, size=16):
         start_height = win_height-size*len(text)
         start_width = 0
         text_sprites = []
@@ -147,7 +147,7 @@ class SDLWrapper():
                           arm0_sprite,
                           wposx=win_width/2,
                           wposy=0,
-                          angle=45)
+                          angle=0)
 
         endr, endtheta = arm0.get_end()
         ppos = calculate.PolarPos(endr, endtheta, win_width, win_height)

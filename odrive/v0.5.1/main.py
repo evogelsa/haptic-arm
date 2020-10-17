@@ -94,7 +94,7 @@ def main():
     vf_args = {
             'xcenter': arm.arm0.length,
             'ycenter': arm.arm1.length,
-            'dtheta' : np.pi,
+            'dtheta' : np.pi/4,
             'radius' : arm.arm0.length/4,
             'buffer' : arm.arm0.length/4 * .05,
             'drmax'  : 1,
@@ -103,6 +103,8 @@ def main():
 
     # create visualization window
     vis = visualize.SDLWrapper()
+    # and generate the arm segments
+    vis.generate_device()
 
     try:
         running = True
