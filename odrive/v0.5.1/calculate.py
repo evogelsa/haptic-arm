@@ -52,6 +52,53 @@ def jacobian(arm, theta0, theta1):
 def inv_jacobian(arm, theta0, theta1):
     return np.linalg.pinv(jacobian(arm, theta0, theta1))
 
+class CartPos():
+    '''origin at top middle of window, y is positive downwards, x pos left'''
+    def __init__(self, x=0, y=0, win_width=800, win_height=600):
+        self.x = x
+        self.y = y
+        self.win_width = win_width
+        self.win_height = win_height
+    def to_polar(self):
+        x = -self.x
+        y = -self.y
+        r = np.sqrt(x*x + y*y)
+        theta = np.arctan2(y, x)
+        return PolarPos(r, theta, self.win_width, self.win_height)
+    def to_win(self):
+        x = self.win_width/2 - self.x
+        y = self.y
+        return WinPos(x, y, self.win_width, self.win_height)
+
+class WinPos():
+    '''origin at the top left of window'''
+    def __init__(self, x=0, y=0, win_width=800, win_height=600):
+        self.x = x
+        self.y = y
+        self.win_width = win_width
+        self.win_height = win_height
+    def to_cart(self):
+        x = self.win_width/2 - self.x
+        y = self.y
+        return CartPos(x, y, self.win_width, self.win_height)
+    def to_polar(self):
+        return self.to_cart().to_polar()
+
+
+class PolarPos():
+    '''origin is center of unit circle at top middle of window'''
+    def __init__(self, r=0, theta=0, win_width=800, win_height=600):
+        self.r = r
+        self.theta = theta
+        self.win_width = win_width
+        self.win_height = win_height
+    def to_cart(self):
+        x = -(self.r * np.cos(self.theta))
+        y = -(self.r * np.sin(self.theta))
+        return CartPos(x, y, self.win_width, self.win_height)
+    def to_win(self):
+        return self.to_cart().to_win()
+
 class VectorField():
     def __init__(self, arm, field='spiralbound', args=None):
         self.field = field
@@ -71,7 +118,7 @@ class VectorField():
         try:
             xcenter = self.args['xcenter']
             ycenter = self.args['ycenter']
-            dtheta = self.args['dtheta']
+            dtheta  = self.args['dtheta']
         except KeyError:
             print('Missing required arguments for \'circle\'')
             raise
@@ -85,10 +132,11 @@ class VectorField():
         return dx, dy
     def circlebound(self, x, y):
         try:
-            radius = self.args['radius']
-            buffer = self.args['buffer']
+            radius  = self.args['radius']
+            buffer  = self.args['buffer']
             xcenter = self.args['xcenter']
             ycenter = self.args['ycenter']
+            drmax   = self.args['drmax']
         except KeyError:
             print('Missing required arguments for \'circlebound\'')
             raise
@@ -101,16 +149,17 @@ class VectorField():
 
         r, theta = cart2polar(x, y)
 
+        dr = 0
         if r > outer:
             vel_eq = -(r - outer)
             # vel_eq is linear based on distance from outer circle boundary
             # so map this to a reasonable range for the velocity
             dr = map(vel_eq, 0, self.arm.arm0.length +
-                     self.arm.arm1.length, 0, 0.03)
+                     self.arm.arm1.length, 0, drmax)
         elif r < inner:
             vel_eq = inner - r
             dr = map(vel_eq, 0, self.arm.arm0.length +
-                     self.arm.arm1.length, 0, 0.03)
+                     self.arm.arm1.length, 0, drmax)
 
         dx, dy = dpolar2cart(r, theta, dr, 0)
         return dx, dy
