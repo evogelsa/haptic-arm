@@ -4,6 +4,10 @@ import visualize
 from sys import exit
 import numpy as np
 
+
+MAX_VEL0 = 5
+MAX_VEL1 = 5
+
 def step(arm, vf, vis=None):
     # get current arm configuration in encoder counts
     count0 = arm.odrive.axis0.encoder.shadow_count
@@ -36,6 +40,10 @@ def step(arm, vf, vis=None):
     # convert counts/s to turns/s
     vel0 = dcount0 / arm.odrive.axis0.encoder.config.cpr
     vel1 = dcount1 / arm.odrive.axis1.encoder.config.cpr
+
+    # limit velocities to max of 5 turn/s
+    vel0 = min(vel0, MAX_VEL0)
+    vel1 = min(vel1, MAX_VEL1)
 
     # set odrive axis velocities
     if vel0 != 0:
@@ -80,6 +88,11 @@ def stop(arm):
 def main():
     # instantiate a haptic device (connects to odrive)
     arm = device.HapticDevice()
+
+    # redefine max velocities
+    global MAX_VEL0, MAX_VEL1
+    MAX_VEL0 = arm.odrive.axis0.controller.config.vel_limit
+    MAX_VEL1 = arm.odrive.axis1.controller.config.vel_limit
 
     # calibrate encoders with odrive calibration routine
     arm.calibrate()
