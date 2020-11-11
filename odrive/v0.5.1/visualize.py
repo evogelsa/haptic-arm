@@ -4,6 +4,8 @@ import time
 import os
 import sys
 
+# TODO coordinate system, vector field, center point
+
 if sys.platform == 'win32':
     sdlpath = os.path.join(os.path.dirname(__file__), 'lib')
     os.environ['PYSDL2_DLL_PATH'] = sdlpath
@@ -52,9 +54,13 @@ class ArmSegment(sdl2.ext.Entity):
         '''gets the middle of the end of segment in polar cords'''
         cpos = self.sprite.ppos.to_cart()
         ox, oy = cpos.x, cpos.y
-        x = self.sprite.size[1]*np.sin(np.radians(self.sprite.angle)) + ox
-        y = self.sprite.size[1]*np.cos(np.radians(self.sprite.angle)) + oy
+        x = self.sprite.size[1]*np.cos(np.radians(-self.sprite.angle)) + ox
+        y = self.sprite.size[1]*np.sin(np.radians(-self.sprite.angle)) + oy
         ppos_end = calculate.CartPos(x, y, win_width, win_height).to_polar()
+        #  ppos = self.sprite.ppos
+        #  r = ppos.r + self.sprite.size[1]
+        #  theta = ppos.theta
+        #  ppos_end = calculate.PolarPos(r, theta, win_width, win_height)
         return ppos_end.r, ppos_end.theta
     def update(self, wposx, wposy, angle):
         wpos = calculate.WinPos(wposx, wposy, win_width, win_height)
@@ -62,8 +68,8 @@ class ArmSegment(sdl2.ext.Entity):
         self.sprite.angle = angle
 
     def draw(self, spriterenderer):
-        wpos = self.sprite.ppos.to_win()
-        x, y = wpos.x, wpos.y
+        #  wpos = self.sprite.ppos.to_win()
+        #  x, y = wpos.x, wpos.y
         cornerx, cornery = self.get_origin()
         r = sdl2.SDL_Rect(cornerx,
                           cornery,
@@ -142,7 +148,7 @@ class SDLWrapper():
         self.text_sprites = text_sprites
 
     def generate_device(self):
-        arm0_sprite = self.spritefactory.from_color(ORANGE, size=(30,200))
+        arm0_sprite = self.spritefactory.from_color(BLUE, size=(30,200))
         arm0 = ArmSegment(self.world,
                           arm0_sprite,
                           wposx=win_width/2,
@@ -163,14 +169,15 @@ class SDLWrapper():
     def update_device(self, theta0, theta1):
         ppos = self.arms[0].sprite.ppos
         wpos = ppos.to_win()
-        angle = np.degrees(theta0)
+        angle = np.degrees(-theta0) # pi - theta0
         self.arms[0].update(wpos.x, wpos.y, angle)
 
         r, theta = self.arms[0].get_end()
         ppos = calculate.PolarPos(r, theta, win_width, win_height)
         wpos = ppos.to_win()
-        angle = np.degrees(theta1)
+        angle = np.degrees(-theta1)
         self.arms[1].update(wpos.x, wpos.y, angle)
+
 
     # run simulation
     def step(self):
@@ -212,14 +219,14 @@ def main():
     running = True
     while running:
         t = time.monotonic()
-        theta0 = -np.pi/2*np.cos(t)
-        theta1 = -np.pi/2*np.sin(t)
+        theta0 = np.pi/4*np.sin(t)
+        theta1 = np.pi/4*np.cos(2*t)
         vis.update_device(theta0, theta1)
 
         text = [[str(vis.arms[0].get_end()[0])[:5],
                  str(vis.arms[0].get_end()[1])[:5]],
-                [str(vis.arms[1].get_end()[0])[:5],
-                 str(vis.arms[1].get_end()[1])[:5]]]
+                [str(vis.arms[1].sprite.ppos.to_win().x)[:5],
+                 str(vis.arms[1].sprite.ppos.to_win().y)[:5]]]
         vis.text(text)
 
         vis.step()

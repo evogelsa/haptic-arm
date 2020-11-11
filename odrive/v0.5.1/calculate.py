@@ -1,8 +1,11 @@
 import numpy as np
 
 def cart2polar(x, y):
-    r = ((x**2) + (y**2))**.5
-    theta = np.arctan(y/x)
+    a = x + 1j * y
+    r = np.abs(a)
+    theta = np.angle(a)
+    #  r = ((x**2) + (y**2))**.5
+    #  theta = np.arctan(y/x)
 
     return (r, theta)
 
@@ -15,8 +18,8 @@ def map(v, vmin, vmax, tmin, tmax):
     vrange = vmax - vmin
     vscale = (v - vmin) / vrange
     trange = tmax - tmin
-    v = vscale * trange + tmin
-    return v
+    tv = vscale * trange + tmin
+    return tv
 
 def count2rad(arm, count, axis):
     try:
@@ -40,7 +43,7 @@ def rad2count(arm, theta, axis):
 
 def fwd_kinematics(arm, theta0, theta1):
     x = arm.arm0.length * np.cos(theta0) + arm.arm1.length * np.cos(theta1)
-    y = arm.arm1.length * np.sin(theta1) + arm.arm1.length * np.sin(theta1)
+    y = arm.arm1.length * np.sin(theta0) + arm.arm1.length * np.sin(theta1)
     return x, y
 
 def jacobian(arm, theta0, theta1):
@@ -53,33 +56,36 @@ def inv_jacobian(arm, theta0, theta1):
     return np.linalg.pinv(jacobian(arm, theta0, theta1))
 
 class CartPos():
-    '''origin at top middle of window, y is positive downwards, x pos left'''
+    '''origin at top middle of window, x is positive downwards, y pos right'''
     def __init__(self, x=0, y=0, win_width=800, win_height=600):
         self.x = x
         self.y = y
         self.win_width = win_width
         self.win_height = win_height
     def to_polar(self):
-        x = -self.x
-        y = -self.y
-        r = np.sqrt(x*x + y*y)
-        theta = np.arctan2(y, x)
+        a = self.x + 1j * self.y
+        r = np.abs(a)
+        theta = np.angle(a)
+        #  x = self.x
+        #  y = self.y
+        #  r = np.sqrt(x*x + y*y)
+        #  theta = np.arctan2(y, x)
         return PolarPos(r, theta, self.win_width, self.win_height)
     def to_win(self):
-        x = self.win_width/2 - self.x
-        y = self.y
+        x = self.y + self.win_width/2
+        y = self.x
         return WinPos(x, y, self.win_width, self.win_height)
 
 class WinPos():
-    '''origin at the top left of window'''
+    '''origin at the top left of window, x pos to right, y pos downwards'''
     def __init__(self, x=0, y=0, win_width=800, win_height=600):
         self.x = x
         self.y = y
         self.win_width = win_width
         self.win_height = win_height
     def to_cart(self):
-        x = self.win_width/2 - self.x
-        y = self.y
+        x = self.y
+        y = self.x - self.win_width/2
         return CartPos(x, y, self.win_width, self.win_height)
     def to_polar(self):
         return self.to_cart().to_polar()
@@ -93,8 +99,8 @@ class PolarPos():
         self.win_width = win_width
         self.win_height = win_height
     def to_cart(self):
-        x = -(self.r * np.cos(self.theta))
-        y = -(self.r * np.sin(self.theta))
+        x = self.r * np.cos(self.theta)
+        y = self.r * np.sin(self.theta)
         return CartPos(x, y, self.win_width, self.win_height)
     def to_win(self):
         return self.to_cart().to_win()

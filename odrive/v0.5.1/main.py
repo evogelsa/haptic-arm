@@ -41,24 +41,17 @@ def step(arm, vf, vis=None):
     vel0 = dcount0 / arm.odrive.axis0.encoder.config.cpr
     vel1 = dcount1 / arm.odrive.axis1.encoder.config.cpr
 
-    # limit velocities to max of 5 turn/s
+    # limit velocities to set maximums to avoid overspeed errors
     vel0 = min(vel0, MAX_VEL0)
     vel1 = min(vel1, MAX_VEL1)
+    vel0 = max(vel0, -MAX_VEL0)
+    vel1 = max(vel1, -MAX_VEL1)
 
-    # set odrive axis velocities
-    if vel0 != 0:
-        arm.odrive.axis0.controller.input_vel = vel0
-        arm.odrive.axis0.controller.input_torque = min(0.25, 0.25*vel0)
-    else:
-        arm.odrive.axis0.controller.input_vel = 0
-        arm.odrive.axis0.controller.input_torque = 0
+    # arm.odrive.axis0.controller.input_vel = vel0
+    arm.odrive.axis0.controller.input_torque = vel0
 
-    if vel1 != 0:
-        arm.odrive.axis1.controller.input_vel = vel1
-        arm.odrive.axis1.controller.input_torque = min(0.25, 0.25*vel1)
-    else:
-        arm.odrive.axis1.controller.input_vel = 0
-        arm.odrive.axis1.controller.input_torque = 0
+    # arm.odrive.axis1.controller.input_vel = vel1
+    arm.odrive.axis1.controller.input_torque = vel1
 
     if vis is not None:
         line1 = "count0 : {:9d} | count1 : {:9d}".format(count0, count1)
@@ -91,23 +84,27 @@ def main():
 
     # redefine max velocities
     global MAX_VEL0, MAX_VEL1
-    MAX_VEL0 = arm.odrive.axis0.controller.config.vel_limit
-    MAX_VEL1 = arm.odrive.axis1.controller.config.vel_limit
+    MAX_VEL0 = arm.odrive.axis0.controller.config.vel_limit / 4
+    MAX_VEL1 = arm.odrive.axis1.controller.config.vel_limit / 4
 
     # calibrate encoders with odrive calibration routine
+    arm.odrive.axis0.clear_errors()
+    arm.odrive.axis1.clear_errors()
     arm.calibrate()
 
     # use custom homing routine to define counts/angle
     arm.home()
 
+    input('press enter to continue...')
+
     # setup control mode
-    arm.set_ctrl_mode_velocity()
+    arm.set_ctrl_mode_torque()
 
     # instantiate vector field for arm
     vf_args = {
-            'xcenter': arm.arm0.length,
-            'ycenter': arm.arm1.length,
-            'dtheta' : np.pi/4,
+            'xcenter': np.sqrt(2)*arm.arm0.length,
+            'ycenter': 0,
+            'dtheta' : 1,
             'radius' : arm.arm0.length/4,
             'buffer' : arm.arm0.length/4 * .05,
             'drmax'  : 1,

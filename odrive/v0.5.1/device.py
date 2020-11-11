@@ -1,4 +1,4 @@
-from numpy import pi
+from numpy import pi, radians
 from time import sleep
 import odrive
 from odrive.enums import *
@@ -33,23 +33,31 @@ class HapticDevice():
         Run the homing routine to calculate zero position and equivalent encoder
         counts to radians/degrees. In the future can be automated with endstops
         '''
+
+        ## TODO CHANGE TO X POS DOWN AND Y POS RIGHT
+
         # move to zero position and record
         input("Move arm to first position and press enter to continue")
         self.arm0.zero = self.odrive.axis0.encoder.shadow_count
         self.arm1.zero = self.odrive.axis1.encoder.shadow_count
+        print(self.arm0.zero, self.arm1.zero)
 
         # move to defined location and record
-        input("Move arm 90 deg right and press enter to continue")
+        input("Move arm 90 deg counterclockwise and press enter to continue")
         cal0 = self.odrive.axis0.encoder.shadow_count
         cal1 = self.odrive.axis1.encoder.shadow_count
+        print(cal0, cal1)
 
         # calculate the difference in encoder counts and define conversion ratio
         # to radians
-        theta_dif = -90 * pi / 180
-        cnt0_dif = self.arm0.zero - cal0
-        cnt1_dif = self.arm1.zero - cal1
+        theta_dif = radians(90)
+        cnt0_dif = cal0 - self.arm0.zero
+        cnt1_dif = cal1 - self.arm1.zero
+        print(cnt0_dif, cnt1_dif)
+
         self.arm0.cnt_per_rad = cnt0_dif / theta_dif
         self.arm1.cnt_per_rad = cnt1_dif / theta_dif
+        print(self.arm0.cnt_per_rad, self.arm1.cnt_per_rad)
     def set_axis_state_closed_loop(self, axes=[0,1]):
         '''
         Set the specified axes to closed loop control mode, requires
