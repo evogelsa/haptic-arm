@@ -8,10 +8,10 @@ class HapticDevice():
     Wrapper for the SCARA arm and its associated utility functions. Stores
     objects for each arm segment and the odrive controller
     '''
-    def __init__(self):
-        self.odrive = odrive.find_any()
-        self.arm0 = ArmSegment()
-        self.arm1 = ArmSegment()
+    def __init__(self, init_with_device=True, arm_length=0.2):
+        self.odrive = odrive.find_any() if init_with_device else None
+        self.arm0 = ArmSegment(arm_length)
+        self.arm1 = ArmSegment(arm_length)
     def calibrate(self, axes=[0,1]):
         '''
         Run the odrive axis/encoder calibration routinen on the specified axes

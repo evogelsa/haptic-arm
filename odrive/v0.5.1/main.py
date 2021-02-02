@@ -5,8 +5,8 @@ from sys import exit
 import numpy as np
 
 
-MAX_VEL0 = 5
-MAX_VEL1 = 5
+MAX_VEL0 = .5
+MAX_VEL1 = .5
 
 def step(arm, vf, vis=None):
     # get current arm configuration in encoder counts
@@ -104,17 +104,17 @@ def main():
     vf_args = {
             'xcenter': np.sqrt(2)*arm.arm0.length,
             'ycenter': 0,
-            'dtheta' : 1,
+            'dtheta' : .5,
             'radius' : arm.arm0.length/4,
             'buffer' : arm.arm0.length/4 * .05,
-            'drmax'  : 1,
+            'drmax'  : .5,
             }
-    vf = calculate.VectorField(arm, field='spiralbound', args=vf_args)
+    vf = calculate.VectorField(arm, field='spring', args=vf_args)
 
     # create visualization window
     vis = visualize.SDLWrapper()
     # and generate the arm segments
-    vis.generate_device()
+    vis.generate_device(arm)
 
     try:
         running = True

@@ -1,10 +1,9 @@
 import calculate
+import device
 import numpy as np
 import time
 import os
 import sys
-
-# TODO coordinate system, vector field, center point
 
 if sys.platform == 'win32':
     sdlpath = os.path.join(os.path.dirname(__file__), 'lib')
@@ -35,69 +34,54 @@ class TextureRenderSystem(sdl2.ext.TextureSpriteRenderSystem):
 # arm segment
 class ArmSegment(sdl2.ext.Entity):
     def __init__(self, world, sprite, wposx=0, wposy=0, angle=0):
-        wpos = calculate.WinPos(wposx, wposy, win_width, win_height)
+        pos = calculate.Coord(wpos=(wposx, wposy),
+                               win_width=win_width,
+                               win_height=win_height)
         self.sprite = sprite
-        self.sprite.ppos = wpos.to_polar()
+        self.sprite.pos = pos
         self.sprite.angle = angle
         self.sprite.position = self.get_origin()
         self.sprite.point = sdl2.SDL_Point(int(self.sprite.size[0]/2), 0)
 
     def get_origin(self):
         '''gets the top left corner of segment for sdl rect in window cords'''
-        wpos = self.sprite.ppos.to_win()
-        x, y = wpos.x, wpos.y
-        cornerx = int(x - self.sprite.size[0]/2)
-        cornery = int(y)
+        cornerx = int(self.sprite.pos.window.x - self.sprite.size[0]/2)
+        cornery = self.sprite.pos.window.y
         return (cornerx, cornery)
 
     def get_end(self):
         '''gets the middle of the end of segment in polar cords'''
-        cpos = self.sprite.ppos.to_cart()
-        ox, oy = cpos.x, cpos.y
-        x = self.sprite.size[1]*np.cos(np.radians(-self.sprite.angle)) + ox
-        y = self.sprite.size[1]*np.sin(np.radians(-self.sprite.angle)) + oy
-        ppos_end = calculate.CartPos(x, y, win_width, win_height).to_polar()
-        #  ppos = self.sprite.ppos
-        #  r = ppos.r + self.sprite.size[1]
-        #  theta = ppos.theta
-        #  ppos_end = calculate.PolarPos(r, theta, win_width, win_height)
-        return ppos_end.r, ppos_end.theta
+        ox, oy = self.sprite.pos.cartesian
+        x = ((self.sprite.size[1]/calculate.PIXELS_PER_METER)
+              * np.cos(np.radians(-self.sprite.angle)) + ox)
+        y = ((self.sprite.size[1]/calculate.PIXELS_PER_METER)
+              * np.sin(np.radians(-self.sprite.angle)) + oy)
+        end = calculate.Coord(cpos=(x,y), win_width=win_width,
+                              win_height=win_height)
+        return end.polar.r, end.polar.theta
+
     def update(self, wposx, wposy, angle):
-        wpos = calculate.WinPos(wposx, wposy, win_width, win_height)
-        self.sprite.ppos = wpos.to_polar()
+        self.sprite.pos.window = (wposx, wposy)
         self.sprite.angle = angle
 
     def draw(self, spriterenderer):
-        #  wpos = self.sprite.ppos.to_win()
-        #  x, y = wpos.x, wpos.y
         cornerx, cornery = self.get_origin()
-        r = sdl2.SDL_Rect(cornerx,
-                          cornery,
-                          self.sprite.size[0],
+        r = sdl2.SDL_Rect(cornerx, cornery, self.sprite.size[0],
                           self.sprite.size[1])
         p = self.sprite.point
-        sdl2.SDL_RenderCopyEx(spriterenderer.sdlrenderer,
-                              self.sprite.texture,
-                              None,
-                              r,
-                              self.sprite.angle,
-                              p,
-                              0)
+        sdl2.SDL_RenderCopyEx(spriterenderer.sdlrenderer, self.sprite.texture,
+                              None, r, self.sprite.angle, p, 0)
 
 class SDLWrapper():
-    def __init__(self,
-                 window = None,
-                 renderer = None,
-                 fontmanager = None,
-                 spritefactory = None,
-                 world = None,
-                 spriterenderer = None):
+    def __init__(self, window = None, renderer = None, fontmanager = None,
+                 spritefactory = None, world = None, spriterenderer = None):
         self.window = window
         self.renderer = renderer
         self.fontmanager = fontmanager
         self.spritefactory = spritefactory
         self.world = world
         self.spriterenderer = spriterenderer
+        self.vectors = None
 
         # init sdl systems
         sdl2.ext.init()
@@ -147,8 +131,48 @@ class SDLWrapper():
             start_width = 0
         self.text_sprites = text_sprites
 
-    def generate_device(self):
-        arm0_sprite = self.spritefactory.from_color(BLUE, size=(30,200))
+    def vector_stream_plot(self, vf=None, arm=device.HapticDevice(False)):
+        if vf is None:
+            vf_args = {
+                    'xcenter': np.sqrt(2)*arm.arm0.length,
+                    #  'xcenter': 200,
+                    'ycenter': 0,
+                    'dtheta' : .5,
+                    'radius' : arm.arm0.length/4,
+                    'buffer' : arm.arm0.length/4 * .05,
+                    'drmax'  : .5,
+                    }
+            vf = calculate.VectorField(arm, field='spiralbound', args=vf_args)
+
+        center = calculate.Coord(cpos=(vf.args['xcenter'], vf.args['ycenter']),
+                                 win_width=win_width, win_height=win_height)
+
+        self.vectors = []
+        self.squares = []
+        self.center = [center.window.x-5, center.window.y-5, 10, 10]
+
+        step_size = 40
+        for y in np.arange(0, win_height//step_size*step_size+1, step_size):
+            for x in np.arange(0, win_width//step_size*step_size+1, step_size):
+                vector = []
+                coord = calculate.Coord(wpos=(x, y), win_width=win_width,
+                                        win_height=win_height)
+                vector.extend((int(coord.window.x), int(coord.window.y)))
+                self.squares.append((x-3, y-3, 6, 6))
+                for i in range(3):
+                    dx, dy = vf.return_vectors(*coord.cartesian)
+                    dx /= 10
+                    dy /= 10
+                    coord.cartesian = (coord.cartesian.x+dx,
+                                       coord.cartesian.y+dy)
+                    vector.extend((int(coord.window.x), int(coord.window.y)))
+                self.vectors.append(vector)
+
+
+    def generate_device(self, arm=device.HapticDevice(False)):
+        arm0_sprite = self.spritefactory.from_color(
+                BLUE,
+                size=(30,int(arm.arm0.length*calculate.PIXELS_PER_METER)))
         arm0 = ArmSegment(self.world,
                           arm0_sprite,
                           wposx=win_width/2,
@@ -156,27 +180,28 @@ class SDLWrapper():
                           angle=0)
 
         endr, endtheta = arm0.get_end()
-        ppos = calculate.PolarPos(endr, endtheta, win_width, win_height)
-        wpos = ppos.to_win()
-        arm1_sprite = self.spritefactory.from_color(ORANGE, size=(30,200))
+        pos = calculate.Coord(ppos=(endr, endtheta), win_width=win_width,
+                               win_height=win_height)
+        arm1_sprite = self.spritefactory.from_color(
+                ORANGE,
+                size=(30,int(arm.arm1.length*calculate.PIXELS_PER_METER)))
         arm1 = ArmSegment(self.world,
                           arm1_sprite,
-                          wposx=int(wpos.x),
-                          wposy=int(wpos.y),
+                          wposx=pos.window.x,
+                          wposy=pos.window.y,
                           angle=0)
         self.arms = (arm0, arm1)
 
     def update_device(self, theta0, theta1):
-        ppos = self.arms[0].sprite.ppos
-        wpos = ppos.to_win()
+        pos = self.arms[0].sprite.pos
         angle = np.degrees(-theta0) # pi - theta0
-        self.arms[0].update(wpos.x, wpos.y, angle)
+        self.arms[0].update(pos.window.x, pos.window.y, angle)
 
         r, theta = self.arms[0].get_end()
-        ppos = calculate.PolarPos(r, theta, win_width, win_height)
-        wpos = ppos.to_win()
+        pos = calculate.Coord(ppos=(r, theta), win_width=win_width,
+                              win_height=win_height)
         angle = np.degrees(-theta1)
-        self.arms[1].update(wpos.x, wpos.y, angle)
+        self.arms[1].update(pos.window.x, pos.window.y, angle)
 
 
     # run simulation
@@ -186,6 +211,12 @@ class SDLWrapper():
 
         # clear old graphics and update state for next frame
         self.renderer.clear()
+
+        if self.vectors is not None:
+            for vector in self.vectors:
+                self.renderer.draw_line(vector, color=WHITE)
+            self.renderer.draw_rect(self.squares, color=WHITE)
+            self.renderer.fill(self.center, color=GREEN)
 
         # render arm sprites
         for arm in self.arms:
@@ -216,6 +247,7 @@ def check_running():
 def main():
     vis = SDLWrapper()
     vis.generate_device()
+    vis.vector_stream_plot()
     running = True
     while running:
         t = time.monotonic()
@@ -225,8 +257,8 @@ def main():
 
         text = [[str(vis.arms[0].get_end()[0])[:5],
                  str(vis.arms[0].get_end()[1])[:5]],
-                [str(vis.arms[1].sprite.ppos.to_win().x)[:5],
-                 str(vis.arms[1].sprite.ppos.to_win().y)[:5]]]
+                [str(vis.arms[1].sprite.pos.window.x)[:5],
+                 str(vis.arms[1].sprite.pos.window.y)[:5]]]
         vis.text(text)
 
         vis.step()
