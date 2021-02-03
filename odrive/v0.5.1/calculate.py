@@ -195,7 +195,7 @@ class VectorField():
 
         r, theta = cart2polar(x, y)
 
-        dr = map(r, 0, self.arm.arm0.length, 0, drmax)
+        dr = map(r, 0, self.arm.arm0.length, 0, -drmax)
 
         dx, dy = dpolar2cart(r, theta, dr, 0)
 
