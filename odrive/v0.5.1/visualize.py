@@ -135,10 +135,9 @@ class SDLWrapper():
         if vf is None:
             vf_args = {
                     'xcenter': np.sqrt(2)*arm.arm0.length,
-                    #  'xcenter': 200,
                     'ycenter': 0,
                     'dtheta' : .5,
-                    'radius' : arm.arm0.length/4,
+                    'radius' : arm.arm0.length,
                     'buffer' : arm.arm0.length/4 * .05,
                     'drmax'  : .5,
                     }
@@ -159,10 +158,10 @@ class SDLWrapper():
                                         win_height=win_height)
                 vector.extend((int(coord.window.x), int(coord.window.y)))
                 self.squares.append((x-3, y-3, 6, 6))
-                for i in range(3):
+                for i in range(20):
                     dx, dy = vf.return_vectors(*coord.cartesian)
-                    dx /= 10
-                    dy /= 10
+                    dx /= 50
+                    dy /= 50
                     coord.cartesian = (coord.cartesian.x+dx,
                                        coord.cartesian.y+dy)
                     vector.extend((int(coord.window.x), int(coord.window.y)))
