@@ -131,18 +131,7 @@ class SDLWrapper():
             start_width = 0
         self.text_sprites = text_sprites
 
-    def vector_stream_plot(self, vf=None, arm=device.HapticDevice(False)):
-        if vf is None:
-            vf_args = {
-                    'xcenter': np.sqrt(2)*arm.arm0.length,
-                    'ycenter': 0,
-                    'dtheta' : .5,
-                    'radius' : arm.arm0.length,
-                    'buffer' : arm.arm0.length/4 * .05,
-                    'drmax'  : .5,
-                    }
-            vf = calculate.VectorField(arm, field='spiralbound', args=vf_args)
-
+    def vector_stream_plot(self, vf, arm):
         center = calculate.Coord(cpos=(vf.args['xcenter'], vf.args['ycenter']),
                                  win_width=win_width, win_height=win_height)
 
@@ -244,9 +233,32 @@ def check_running():
     return True
 
 def main():
+    # init visualization stuff
     vis = SDLWrapper()
     vis.generate_device()
-    vis.vector_stream_plot()
+
+    arm = device.HapticDevice(False)
+
+    # take cli args for vf
+    if '-field' in sys.argv:
+        field = sys.argv[sys.argv.index('-field')+1]
+        if field not in calculate.VectorField(arm)._fields.keys():
+            raise UserWarning('Supplied field type does not exist')
+            exit()
+    else:
+        field = None
+
+    vf_args = {
+            'xcenter': np.sqrt(2)*arm.arm0.length,
+            'ycenter': 0,
+            'dtheta' : .5,
+            'radius' : arm.arm0.length/2,
+            'buffer' : arm.arm0.length/4 * .05,
+            'drmax'  : .5,
+            }
+    vf = calculate.VectorField(arm, field=field, args=vf_args)
+
+    vis.vector_stream_plot(vf, arm)
     running = True
     while running:
         t = time.monotonic()

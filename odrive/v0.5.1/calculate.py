@@ -237,11 +237,11 @@ class VectorField():
 
         dr = 0
         if r > outer:
-            vel_eq = -(r - outer)
+            vel_eq = (r - outer)
             # vel_eq is linear based on distance from outer circle boundary
             # so map this to a reasonable range for the velocity
             dr = map(vel_eq, 0, self.arm.arm0.length +
-                     self.arm.arm1.length, 0, drmax)
+                     self.arm.arm1.length, 0, -drmax)
         elif r < inner:
             vel_eq = inner - r
             dr = map(vel_eq, 0, self.arm.arm0.length +
