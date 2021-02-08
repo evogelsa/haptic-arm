@@ -9,6 +9,7 @@ PIXELS_PER_METER = 1000
 
 
 def cart2polar(x, y):
+    '''Convert cartesian coordinates to polar'''
     a = x + 1j * y
     r = np.abs(a)
     theta = np.angle(a)
@@ -18,11 +19,13 @@ def cart2polar(x, y):
     return (r, theta)
 
 def dpolar2cart(r, theta, dr, dtheta):
+    '''Convert polar velocities to cartesian'''
     dx = dr * np.cos(theta) - r * np.sin(theta) * dtheta
     dy = dr * np.sin(theta) + r * np.cos(theta) * dtheta
     return dx, dy
 
 def map(v, vmin, vmax, tmin, tmax):
+    '''Map a given value in a range [vmin,vmax] to a target range [tmin,tmax]'''
     v = min(v, vmax)
     v = max(v, vmin)
     vrange = vmax - vmin
@@ -32,6 +35,7 @@ def map(v, vmin, vmax, tmin, tmax):
     return tv
 
 def count2rad(arm, count, axis):
+    '''Convert encoder counts to radians'''
     try:
         if axis == 0:
             return (count - arm.arm0.zero) / arm.arm0.cnt_per_rad
@@ -42,6 +46,7 @@ def count2rad(arm, count, axis):
         raise
 
 def rad2count(arm, theta, axis):
+    '''Convert radians to encoder counts'''
     try:
         if axis == 0:
             return theta * arm.arm0.cnt_per_rad + arm.arm0.zero
@@ -52,22 +57,31 @@ def rad2count(arm, theta, axis):
         raise
 
 def fwd_kinematics(arm, theta0, theta1):
+    '''Calculate the end effector position in cartesian coordinates from the
+    given arm configuration'''
     x = arm.arm0.length * np.cos(theta0) + arm.arm1.length * np.cos(theta1)
     y = arm.arm0.length * np.sin(theta0) + arm.arm1.length * np.sin(theta1)
     return x, y
 
 def jacobian(arm, theta0, theta1):
+    '''Return the jacobian matrix from the given arm angles'''
     return np.array([[-arm.arm0.length * np.sin(theta0),
                       -arm.arm1.length * np.sin(theta1)],
                      [arm.arm0.length * np.cos(theta0),
                       arm.arm1.length * np.cos(theta1)]])
 
 def inv_jacobian(arm, theta0, theta1):
+    '''Return the inverted jacobian matrix'''
     return np.linalg.pinv(jacobian(arm, theta0, theta1))
 
 class Coord():
+    '''Coord is a class to store position data on the visualization in different
+    forms. Stores cartesian, polar, and window (graphics) coordinates and auto
+    updates each form when one is set'''
     def __init__(self, cpos=None, wpos=None, ppos=None,
                  win_width=800, win_height=600):
+        '''When a coord is initialized, if multiple kinds of coordinates are
+        passed, cartesian coordinates are given priority.'''
         self._cpos = None
         self._wpos = None
         self._ppos = None

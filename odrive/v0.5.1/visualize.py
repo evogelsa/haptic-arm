@@ -5,14 +5,18 @@ import time
 import os
 import sys
 
+# check for OS and add sdl dlls if on windows
 if sys.platform == 'win32':
     sdlpath = os.path.join(os.path.dirname(__file__), 'lib')
     os.environ['PYSDL2_DLL_PATH'] = sdlpath
+# include resources
 font = os.path.join(os.path.dirname(__file__), 'font/Inconsolata-Regular.ttf')
 
 import sdl2
 import sdl2.ext
 
+
+# define some basic colors
 WHITE  = sdl2.ext.Color(255,255,255)
 BLACK  = sdl2.ext.Color(0,0,0)
 RED    = sdl2.ext.Color(255,0,0)
@@ -20,19 +24,25 @@ GREEN  = sdl2.ext.Color(0,255,0)
 BLUE   = sdl2.ext.Color(0,0,255)
 ORANGE = sdl2.ext.Color(232,90,9)
 
+# standard window size
 win_width = 800
 win_height = 600
 
+# global elapsed time variable to keep track of visualization frame rate and
+# simulation rate
 elapsed_time = 0
 
 # Render system to handle rendering texture sprites (the robot)
 class TextureRenderSystem(sdl2.ext.TextureSpriteRenderSystem):
+    '''TextureRenderSystem is a class which converts texures to sdl sprites'''
     def __init__(self, renderer):
         super(TextureRenderSystem, self).__init__(renderer)
         self.renderer = renderer
 
 # arm segment
 class ArmSegment(sdl2.ext.Entity):
+    '''ArmSegment is a class which holds the necessary utility functions and
+    graphics for a single arm segment (one rectangle in the visualization)'''
     def __init__(self, world, sprite, wposx=0, wposy=0, angle=0):
         pos = calculate.Coord(wpos=(wposx, wposy),
                                win_width=win_width,
@@ -61,10 +71,13 @@ class ArmSegment(sdl2.ext.Entity):
         return end.polar.r, end.polar.theta
 
     def update(self, wposx, wposy, angle):
+        '''Sets the position and angle of the segment on the window to the
+        given window coordinates and angle'''
         self.sprite.pos.window = (wposx, wposy)
         self.sprite.angle = angle
 
     def draw(self, spriterenderer):
+        '''Creates the sprite on the given renderer'''
         cornerx, cornery = self.get_origin()
         r = sdl2.SDL_Rect(cornerx, cornery, self.sprite.size[0],
                           self.sprite.size[1])
@@ -73,6 +86,8 @@ class ArmSegment(sdl2.ext.Entity):
                               None, r, self.sprite.angle, p, 0)
 
 class SDLWrapper():
+    '''SDLWrapper holds together all the basic SDL systems and other classes
+    which help in producing the graphics'''
     def __init__(self, window = None, renderer = None, fontmanager = None,
                  spritefactory = None, world = None, spriterenderer = None):
         self.window = window
@@ -115,6 +130,8 @@ class SDLWrapper():
         self.window.show()
 
     def text(self, text: list, size=16):
+        '''Takes a list of lists and converts the contents into lines of text
+        placed at the bottom left of the window'''
         start_height = win_height-size*len(text)
         start_width = 0
         text_sprites = []
@@ -132,21 +149,32 @@ class SDLWrapper():
         self.text_sprites = text_sprites
 
     def vector_stream_plot(self, vf, arm):
+        '''Visualizes the given vector field with a stream plot. Small
+        rectangles mark the sampling points and the trails move in the direction
+        of the vector field at those sampled points. Green rect shows the center
+        of the vector field.'''
         center = calculate.Coord(cpos=(vf.args['xcenter'], vf.args['ycenter']),
                                  win_width=win_width, win_height=win_height)
 
-        self.vectors = []
-        self.squares = []
+        self.vectors = [] # stores points of vector lines
+        self.squares = [] # stores sampled points
         self.center = [center.window.x-5, center.window.y-5, 10, 10]
 
+        # step size defines how much space between each sample point in number
+        # of pixels
         step_size = 40
+        # iterate over the width and height of the window, includes bounds if
+        # step_size is a multiple of height and width
         for y in np.arange(0, win_height//step_size*step_size+1, step_size):
             for x in np.arange(0, win_width//step_size*step_size+1, step_size):
+                # add initial point to squares and start a vector line
                 vector = []
                 coord = calculate.Coord(wpos=(x, y), win_width=win_width,
                                         win_height=win_height)
                 vector.extend((int(coord.window.x), int(coord.window.y)))
                 self.squares.append((x-3, y-3, 6, 6))
+                # sample n points in direction of vf from origin and add to the
+                # list of vectors
                 for i in range(20):
                     dx, dy = vf.return_vectors(*coord.cartesian)
                     dx /= 50
@@ -158,6 +186,8 @@ class SDLWrapper():
 
 
     def generate_device(self, arm=device.HapticDevice(False)):
+        '''Generate device takes the haptic device class and turns it into two
+        arm segments that will represent the arm'''
         arm0_sprite = self.spritefactory.from_color(
                 BLUE,
                 size=(30,int(arm.arm0.length*calculate.PIXELS_PER_METER)))
@@ -181,6 +211,7 @@ class SDLWrapper():
         self.arms = (arm0, arm1)
 
     def update_device(self, theta0, theta1):
+        '''Updates the device configuration with the given angles'''
         pos = self.arms[0].sprite.pos
         angle = np.degrees(-theta0) # pi - theta0
         self.arms[0].update(pos.window.x, pos.window.y, angle)
@@ -194,6 +225,7 @@ class SDLWrapper():
 
     # run simulation
     def step(self):
+        '''Advances the visualization one time/sim step ahead'''
         # time frame start
         frame_start = time.monotonic()
 
@@ -225,6 +257,8 @@ class SDLWrapper():
             elapsed_time = time.monotonic() - frame_start
 
 def check_running():
+    '''check_running returns false if the visualization window has been closed,
+    otherwise true'''
     events = sdl2.ext.get_events()
     for event in events:
         if event.type == sdl2.SDL_QUIT:
