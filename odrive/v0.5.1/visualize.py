@@ -280,7 +280,7 @@ def main():
             raise UserWarning('Supplied field type does not exist')
             exit()
     else:
-        field = None
+        field = 'spiralbound'
 
     vf_args = {
             'xcenter': np.sqrt(2)*arm.arm0.length,
