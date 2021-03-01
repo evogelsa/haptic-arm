@@ -5,8 +5,8 @@ from sys import exit
 import numpy as np
 
 
-MAX_VEL0 = .5
-MAX_VEL1 = .5
+MAX_VEL0 = 4
+MAX_VEL1 = 4
 
 def step(arm, vf, vis=None):
     # get current arm configuration in encoder counts
@@ -47,11 +47,11 @@ def step(arm, vf, vis=None):
     vel0 = max(vel0, -MAX_VEL0)
     vel1 = max(vel1, -MAX_VEL1)
 
-    # arm.odrive.axis0.controller.input_vel = vel0
-    arm.odrive.axis0.controller.input_torque = vel0
+    arm.odrive.axis0.controller.input_vel = vel0
+    #  arm.odrive.axis0.controller.input_torque = vel0
 
-    # arm.odrive.axis1.controller.input_vel = vel1
-    arm.odrive.axis1.controller.input_torque = vel1
+    arm.odrive.axis1.controller.input_vel = vel1
+    #  arm.odrive.axis1.controller.input_torque = vel1
 
     if vis is not None:
         line1 = "count0 : {:9d} | count1 : {:9d}".format(count0, count1)
@@ -98,7 +98,7 @@ def main():
     input('press enter to continue...')
 
     # setup control mode
-    arm.set_ctrl_mode_torque()
+    arm.set_ctrl_mode_velocity()
 
     # instantiate vector field for arm
     vf_args = {
@@ -115,6 +115,8 @@ def main():
     vis = visualize.SDLWrapper()
     # and generate the arm segments
     vis.generate_device(arm)
+    # and draw the vector field
+    vis.vector_stream_plot(vf, arm)
 
     try:
         running = True
