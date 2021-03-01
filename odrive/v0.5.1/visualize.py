@@ -138,7 +138,7 @@ class SDLWrapper():
         for i in range(len(text)):
             for j in range(len(text[i])):
                 text_sprites.append(self.spritefactory.from_text(text[i][j],
-                                                                 size=size))
+                        size=size, color=BLACK, bg_color=WHITE))
                 text_sprites[-1].position = (start_width, start_height)
                 start_width += text_sprites[-1].size[0]+16
                 if start_width > win_width:
