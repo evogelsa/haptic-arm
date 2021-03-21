@@ -1,5 +1,7 @@
 import calculate
 import device
+
+import matplotlib.pyplot as plt
 import numpy as np
 import time
 import os
@@ -184,6 +186,8 @@ class SDLWrapper():
                     vector.extend((int(coord.window.x), int(coord.window.y)))
                 self.vectors.append(vector)
 
+    def theta_heatmap(self, vf, arm, axis):
+        pass
 
     def generate_device(self, arm=device.HapticDevice(False)):
         '''Generate device takes the haptic device class and turns it into two

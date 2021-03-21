@@ -1,7 +1,9 @@
 import device
 import calculate
 import visualize
-from sys import exit
+
+from argparse import ArgumentParser
+from sys import exit, argv
 import numpy as np
 
 
@@ -28,8 +30,8 @@ def step(arm, vf, vis=None):
 
     # calculate angular velocities with inv jacobian and matrix multiplication
     # [units of rad/s]
-    jac = calculate.inv_jacobian(arm, theta0, theta1)
-    thetas = np.matmul(jac, vectors)
+    ijac = calculate.inv_jacobian(arm, theta0, theta1)
+    thetas = np.matmul(ijac, vectors)
     dtheta0 = thetas[0, 0]
     dtheta1 = thetas[1, 0]
 
@@ -100,16 +102,43 @@ def main():
     # setup control mode
     arm.set_ctrl_mode_velocity()
 
+    # parse cl arguments
+    parser = ArgumentParser(description='Parse field parameters')
+    parser.add_argument('-x', '--xcenter', dest='xcenter', type=float,
+                        default=np.sqrt(2)*arm.arm0.length,
+                        help='center of vector field in x direction')
+    parser.add_argument('-y', '--ycenter', dest='ycenter', type=float,
+                        default=0,
+                        help='center of vector field in y direction')
+    parser.add_argument('-dt', '--dtheta', dest='dtheta', type=float,
+                        default=0.5,
+                        help='rotational speed of vector field')
+    parser.add_argument('-r', '--radius',  dest='radius', type=float,
+                        default=arm.arm0.length/4,
+                        help='radius from field center for deadband')
+    parser.add_argument('-b', '--buffer',  dest='buffer', type=float,
+                        default=arm.arm0.length/4 * .05,
+                        help='size of deadband')
+    parser.add_argument('-dr', '--drmax',  dest='drmax', type=float,
+                        default=0.5,
+                        help='the max radial speed towards center of field')
+    parser.add_argument('-f', '--field',   dest='field', type=str,
+                        default='spiralbound',
+                        help='field type: circle, circlebound, spiral, ' +
+                        'spiralbound, spring')
+    args = parser.parse_args()
+
     # instantiate vector field for arm
     vf_args = {
-            'xcenter': np.sqrt(2)*arm.arm0.length,
-            'ycenter': 0,
-            'dtheta' : .5,
-            'radius' : arm.arm0.length/4,
-            'buffer' : arm.arm0.length/4 * .05,
-            'drmax'  : .5,
+            'xcenter': args.xcenter,
+            'ycenter': args.ycenter,
+            'dtheta' : args.dtheta,
+            'radius' : args.radius,
+            'buffer' : args.buffer,
+            'drmax'  : args.drmax,
             }
-    vf = calculate.VectorField(arm, field='spring', args=vf_args)
+    field=args.field
+    vf = calculate.VectorField(arm, field=field, args=vf_args)
 
     # create visualization window
     vis = visualize.SDLWrapper()

@@ -14,7 +14,7 @@ def cart2polar(x, y):
     r = np.abs(a)
     theta = np.angle(a)
     #  r = ((x**2) + (y**2))**.5
-    #  theta = np.arctan(y/x)
+    #  theta = np.arctan2(y/x)
 
     return (r, theta)
 
