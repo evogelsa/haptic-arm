@@ -26,14 +26,14 @@ def step(arm, vf, vis=None):
     dx, dy = vf.return_vectors(x, y)
 
     # create matrix of vectors
-    vectors = np.array([[dx], [dy]])
+    vectors = np.array([dx, dy])
 
     # calculate angular velocities with inv jacobian and matrix multiplication
     # [units of rad/s]
     ijac = calculate.inv_jacobian(arm, theta0, theta1)
-    thetas = np.matmul(ijac, vectors)
-    dtheta0 = thetas[0, 0]
-    dtheta1 = thetas[1, 0]
+    thetas = ijac @ vectors
+    dtheta0 = thetas[0]
+    dtheta1 = thetas[1]
 
     # convert rad/s to counts/s
     dcount0 = calculate.rad2count(arm, dtheta0, 0)

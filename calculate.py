@@ -2,7 +2,7 @@ import numpy as np
 from collections import namedtuple
 
 CartesianCoordinates = namedtuple('CartesianCoordinates','x y')
-WindowCoordinates = namedtuple('WindowCoordinates','x y')
+WindowCoordinates = namedtuple('WindowCoordinates','i j')
 PolarCoordinates = namedtuple('PolarCoordinates', 'r theta')
 
 PIXELS_PER_METER = 1000
@@ -10,11 +10,11 @@ PIXELS_PER_METER = 1000
 
 def cart2polar(x, y):
     '''Convert cartesian coordinates to polar'''
-    a = x + 1j * y
-    r = np.abs(a)
-    theta = np.angle(a)
-    #  r = ((x**2) + (y**2))**.5
-    #  theta = np.arctan2(y/x)
+    #  a = x + 1j * y
+    #  r = np.abs(a)
+    #  theta = np.angle(a)
+    r = ((x**2) + (y**2))**.5
+    theta = np.arctan2(y, x)
 
     return (r, theta)
 
@@ -107,9 +107,7 @@ class Coord():
                 raise
 
         if self._cpos is None and self._wpos is None and self._ppos is None:
-            raise UserWarning('No initial values supplied for position;' +
-                              ' defaulting to origin')
-            self._cpos = CartesianCoordinates(0, 0)
+            raise UserWarning('No initial values supplied for position')
 
         if self._cpos is not None:
             self._set_polar_from_cart()
@@ -122,19 +120,21 @@ class Coord():
             self._set_window_from_polar()
 
     def _set_polar_from_cart(self):
-        a = self._cpos.x + 1j * self._cpos.y
-        r = np.abs(a)
-        theta = np.angle(a)
+        #  a = self._cpos.x + 1j * self._cpos.y
+        #  r = np.abs(a)
+        #  theta = np.angle(a)
+        r = ((self._cpos.x**2) + (self._cpos.y**2))**0.5
+        theta = np.arctan2(self._cpos.y, self._cpos.x)
         self._ppos = PolarCoordinates(r, theta)
 
     def _set_window_from_cart(self):
-        x = (self._cpos.y*PIXELS_PER_METER) + self.win_width/2
-        y = self._cpos.x*PIXELS_PER_METER
-        self._wpos = WindowCoordinates(x, y)
+        i = self._cpos.x*PIXELS_PER_METER
+        j = (self._cpos.y*PIXELS_PER_METER) + self.win_width/2
+        self._wpos = WindowCoordinates(i, j)
 
     def _set_cart_from_window(self):
-        x = (self._wpos.y)/PIXELS_PER_METER
-        y = (self._wpos.x - self.win_width/2)/PIXELS_PER_METER
+        x = (self._wpos.i)/PIXELS_PER_METER
+        y = (self._wpos.j - self.win_width/2)/PIXELS_PER_METER
         self._cpos = CartesianCoordinates(x, y)
 
     def _set_polar_from_window(self):
@@ -162,7 +162,7 @@ class Coord():
 
     @property
     def window(self):
-        return WindowCoordinates(int(self._wpos.x+0.5), int(self._wpos.y+0.5))
+        return WindowCoordinates(int(self._wpos.i+0.5), int(self._wpos.j+0.5))
 
     @window.setter
     def window(self, pointpair):
@@ -179,6 +179,67 @@ class Coord():
         self._ppos = PolarCoordinates(*pointpair)
         self._set_cart_from_polar()
         self._set_window_from_polar()
+
+    @property
+    def x(self):
+        return self._cpos.x
+
+    @x.setter
+    def x(self, cartx):
+        self._cpos = CartesianCoordinates(cartx, self._cpos.y)
+        self._set_window_from_cart()
+        self._set_polar_from_cart()
+
+    @property
+    def y(self):
+        return self._cpos.y
+
+    @y.setter
+    def y(self, carty):
+        self._cpos = CartesianCoordinates(self._cpos.x, carty)
+        self._set_window_from_cart()
+        self._set_polar_from_cart()
+
+    @property
+    def i(self):
+        return self._wpos.i
+
+    @i.setter
+    def i(self, windowi):
+        self._wpos = WindowCoordinates(windowi, self._wpos.j)
+        self._set_cart_from_window()
+        self._set_polar_from_window()
+
+    @property
+    def j(self):
+        return self._wpos.j
+
+    @j.setter
+    def j(self, windowj):
+        self._wpos = WindowCoordinates(self._wpos.i, windowj)
+        self._set_cart_from_window()
+        self._set_polar_from_window()
+
+    @property
+    def r(self):
+        return self._ppos.r
+
+    @r.setter
+    def r(self, polarr):
+        self._ppos = PolarCoordinates(polarr, self._ppos.theta)
+        self._set_cart_from_polar()
+        self._set_window_from_polar()
+
+    @property
+    def theta(self):
+        return self._ppos.theta
+
+    @theta.setter
+    def theta(self, polartheta):
+        self._ppos = PolarCoordinates(self._ppos.r, polartheta)
+        self._set_cart_from_polar()
+        self._set_window_from_polar()
+
 
 class VectorField():
     def __init__(self, arm, field='spiralbound', args=None):

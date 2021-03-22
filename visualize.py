@@ -45,8 +45,8 @@ class TextureRenderSystem(sdl2.ext.TextureSpriteRenderSystem):
 class ArmSegment(sdl2.ext.Entity):
     '''ArmSegment is a class which holds the necessary utility functions and
     graphics for a single arm segment (one rectangle in the visualization)'''
-    def __init__(self, world, sprite, wposx=0, wposy=0, angle=0):
-        pos = calculate.Coord(wpos=(wposx, wposy),
+    def __init__(self, world, sprite, wposj=0, wposi=0, angle=0):
+        pos = calculate.Coord(wpos=(wposj, wposi),
                                win_width=win_width,
                                win_height=win_height)
         self.sprite = sprite
@@ -57,8 +57,8 @@ class ArmSegment(sdl2.ext.Entity):
 
     def get_origin(self):
         '''gets the top left corner of segment for sdl rect in window cords'''
-        cornerx = int(self.sprite.pos.window.x - self.sprite.size[0]/2)
-        cornery = self.sprite.pos.window.y
+        cornerx = int(self.sprite.pos.window.j - self.sprite.size[0]/2)
+        cornery = self.sprite.pos.window.i
         return (cornerx, cornery)
 
     def get_end(self):
@@ -72,10 +72,10 @@ class ArmSegment(sdl2.ext.Entity):
                               win_height=win_height)
         return end.polar.r, end.polar.theta
 
-    def update(self, wposx, wposy, angle):
+    def update(self, wposj, wposi, angle):
         '''Sets the position and angle of the segment on the window to the
         given window coordinates and angle'''
-        self.sprite.pos.window = (wposx, wposy)
+        self.sprite.pos.window = (wposi, wposj)
         self.sprite.angle = angle
 
     def draw(self, spriterenderer):
@@ -160,7 +160,7 @@ class SDLWrapper():
 
         self.vectors = [] # stores points of vector lines
         self.squares = [] # stores sampled points
-        self.center = [center.window.x-5, center.window.y-5, 10, 10]
+        self.center = [center.window.j-5, center.window.i-5, 10, 10]
 
         # step size defines how much space between each sample point in number
         # of pixels
@@ -173,21 +173,32 @@ class SDLWrapper():
                 vector = []
                 coord = calculate.Coord(wpos=(x, y), win_width=win_width,
                                         win_height=win_height)
-                vector.extend((int(coord.window.x), int(coord.window.y)))
+                vector.extend((int(coord.window.j), int(coord.window.i)))
                 self.squares.append((x-3, y-3, 6, 6))
                 # sample n points in direction of vf from origin and add to the
                 # list of vectors
-                for i in range(20):
+                for _ in range(20):
                     dx, dy = vf.return_vectors(*coord.cartesian)
                     dx /= 50
                     dy /= 50
                     coord.cartesian = (coord.cartesian.x+dx,
                                        coord.cartesian.y+dy)
-                    vector.extend((int(coord.window.x), int(coord.window.y)))
+                    vector.extend((int(coord.window.j), int(coord.window.i)))
                 self.vectors.append(vector)
 
     def theta_heatmap(self, vf, arm, axis):
-        pass
+        # TODO
+        coordmatrix = np.empty((win_height, win_width))
+        for j in np.arange(0, win_height+1, 1):
+            for i in np.arange(0, win_width+1, 1):
+                coordmatrix[i, j] = calculate.Coord(wpos=(i,j)).cartesian
+
+        coordmatrix = coordmatrix.flatten()
+        vecmatrix = coordmatrix.copy()
+        for idx, pair in enumerate(coordmatrix):
+            dx, dy = vf.return_vectors(*pair)
+            vecmatrix[idx] = np.array([dx, dy])
+
 
     def generate_device(self, arm=device.HapticDevice(False)):
         '''Generate device takes the haptic device class and turns it into two
@@ -197,8 +208,8 @@ class SDLWrapper():
                 size=(30,int(arm.arm0.length*calculate.PIXELS_PER_METER)))
         arm0 = ArmSegment(self.world,
                           arm0_sprite,
-                          wposx=win_width/2,
-                          wposy=0,
+                          wposj=win_width/2,
+                          wposi=0,
                           angle=0)
 
         endr, endtheta = arm0.get_end()
@@ -209,8 +220,8 @@ class SDLWrapper():
                 size=(30,int(arm.arm1.length*calculate.PIXELS_PER_METER)))
         arm1 = ArmSegment(self.world,
                           arm1_sprite,
-                          wposx=pos.window.x,
-                          wposy=pos.window.y,
+                          wposj=pos.window.j,
+                          wposi=pos.window.i,
                           angle=0)
         self.arms = (arm0, arm1)
 
@@ -218,13 +229,13 @@ class SDLWrapper():
         '''Updates the device configuration with the given angles'''
         pos = self.arms[0].sprite.pos
         angle = np.degrees(-theta0) # pi - theta0
-        self.arms[0].update(pos.window.x, pos.window.y, angle)
+        self.arms[0].update(pos.window.j, pos.window.i, angle)
 
         r, theta = self.arms[0].get_end()
         pos = calculate.Coord(ppos=(r, theta), win_width=win_width,
                               win_height=win_height)
         angle = np.degrees(-theta1)
-        self.arms[1].update(pos.window.x, pos.window.y, angle)
+        self.arms[1].update(pos.window.j, pos.window.i, angle)
 
 
     # run simulation
@@ -282,7 +293,6 @@ def main():
         field = sys.argv[sys.argv.index('-field')+1]
         if field not in calculate.VectorField(arm)._fields.keys():
             raise UserWarning('Supplied field type does not exist')
-            exit()
     else:
         field = 'spiralbound'
 
@@ -306,8 +316,8 @@ def main():
 
         text = [[str(vis.arms[0].get_end()[0])[:5],
                  str(vis.arms[0].get_end()[1])[:5]],
-                [str(vis.arms[1].sprite.pos.window.x)[:5],
-                 str(vis.arms[1].sprite.pos.window.y)[:5]]]
+                [str(vis.arms[1].sprite.pos.window.j)[:5],
+                 str(vis.arms[1].sprite.pos.window.i)[:5]]]
         vis.text(text)
 
         vis.step()
