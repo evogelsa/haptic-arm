@@ -45,8 +45,8 @@ class TextureRenderSystem(sdl2.ext.TextureSpriteRenderSystem):
 class ArmSegment(sdl2.ext.Entity):
     '''ArmSegment is a class which holds the necessary utility functions and
     graphics for a single arm segment (one rectangle in the visualization)'''
-    def __init__(self, world, sprite, wposj=0, wposi=0, angle=0):
-        pos = calculate.Coord(wpos=(wposj, wposi),
+    def __init__(self, world, sprite, wposi=0, wposj=0, angle=0):
+        pos = calculate.Coord(wpos=(wposi, wposj),
                                win_width=win_width,
                                win_height=win_height)
         self.sprite = sprite
@@ -187,7 +187,13 @@ class SDLWrapper():
                 self.vectors.append(vector)
 
     def theta_heatmap(self, vf, arm, axis):
-        # TODO
+        # TODO heatmap for theta velocities
+        # [ ] calculate ik
+        # [ ] write method to impl newton-raphson (numerical ik)
+        # [ ] click on point in space and it calcs config and draws arm
+        # [ ] check dist to end effector to point and see if w/i tolerance
+        # [ ] for range of theta0 and theta1 calc jacobian and ratio of
+        #     eigenvalues of jacobian, smaller eigenvalue / bigger eigenvalue
         coordmatrix = np.empty((win_height, win_width))
         for j in np.arange(0, win_height+1, 1):
             for i in np.arange(0, win_width+1, 1):
