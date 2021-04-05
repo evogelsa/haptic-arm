@@ -150,7 +150,7 @@ class SDLWrapper():
             start_width = 0
         self.text_sprites = text_sprites
 
-    def vector_stream_plot(self, vf, arm):
+    def vector_stream_plot(self, arm, vf):
         '''Visualizes the given vector field with a stream plot. Small
         rectangles mark the sampling points and the trails move in the direction
         of the vector field at those sampled points. Green rect shows the center
@@ -186,7 +186,11 @@ class SDLWrapper():
                     vector.extend((int(coord.window.j), int(coord.window.i)))
                 self.vectors.append(vector)
 
-    def theta_heatmap(self, vf, arm, axis):
+    def theta_heatmap(self, arm, vf, axis):
+        '''
+        Create and update a texture that is a single color channel heatmap
+        representing the theta velocities.
+        '''
         # TODO heatmap for theta velocities
         # [?] calculate ik
         # [ ] write method to impl newton-raphson (numerical ik)
@@ -196,25 +200,40 @@ class SDLWrapper():
         #     eigenvalues of jacobian, smaller eigenvalue / bigger eigenvalue
 
         # create matrix of coordinates holding cartesian points of each pixel
-        coordmatrix = np.empty((win_height, win_width))
-        for j in np.arange(0, win_height+1, 1):
-            for i in np.arange(0, win_width+1, 1):
-                coordmatrix[i, j] = calculate.Coord(wpos=(i,j)).cartesian
+        #  coordmatrix = np.empty((win_height, win_width), dtype=object)
+        #  for j in np.arange(0, win_height+1, 1):
+        #      for i in np.arange(0, win_width+1, 1):
+        #          coordmatrix[i, j] = calculate.Coord(wpos=(i,j)).cartesian
+
+        I, J = np.meshgrid(np.arange(win_height), np.arange(win_width))
+        #  griddims= I.shape
+        I = I.flatten()
+        J = J.flatten()
+
+        X, Y = calculate.Coord(wpos=(I,J)).cartesian
+        #  coordmatrix = list(zip(X, Y))
 
         # create array of required vectors and IK in each pixel location
-        coordmatrix = coordmatrix.flatten()
-        vecmatrix = np.empty(win_width*win_height)
-        thetamatrix = np.empty(win_width*win_height)
-        for idx, xypair in enumerate(coordmatrix):
-            dx, dy = vf.return_vectors(*xypair)
-            vecmatrix[idx] = np.array([dx, dy])
-            thetamatrix[idx] = arm.inv_kinematics(*xypair)
+        #  coordmatrix = coordmatrix.flatten()
+        #  vecmatrix = np.empty(win_width*win_height, dtype=object)
+        #  thetamatrix = np.empty(win_width*win_height, dtype=object)
+        #  for idx, xypair in enumerate(coordmatrix):
+        #      dx, dy = vf.return_vectors(*xypair)
+        #      vecmatrix[idx] = np.array([dx, dy])
+        #      thetamatrix[idx] = arm.inv_kinematics(*xypair)
+
+        dX, dY = vf.return_vectors(X, Y)
+        Th0, Th1 = arm.inv_kinematics(X, Y)
+
+        #  dthetamatrix = np.empty(win_width*win_height)
+        #  for idx, (vecs, thetas) in enumerate(zip(vecmatrix, thetamatrix)):
+        #      ijac = arm.inv_jacobian(*thetas)
+        #      dtheta = ijac @ vecs
+        #      dthetamatrix[idx] = dtheta
 
         dthetamatrix = np.empty(win_width*win_height)
-        for idx, (vecs, thetas) in enumerate(zip(vecmatrix, thetamatrix)):
-            ijac = arm.inv_jacobian(*thetas)
-            dtheta = ijac @ vecs
-            dthetamatrix[idx] = dtheta
+        for idx, (th0, th1, dx, dy) in enumerate(zip(Th0, Th1, dX, dY)):
+            dthetamatrix[idx] = arm.inv_jacobian(th0, th1) @ np.array([dx, dy])
 
         tex = self.spritefactory.create_texture_sprite(
                 self.renderer,
@@ -222,8 +241,27 @@ class SDLWrapper():
                 sdl2.SDL_PIXELFORMAT_ARGB8888
         )
 
-        # update tex?
-        # sdl2.SDL_UpdateTexture(tex.texture, None, )
+        pixels = [0]*win_width*win_height*4
+        dthetamax = max(dthetamatrix)
+
+        for i in range(win_height):
+            for j in range(win_width):
+                idx = (i*win_width + j) * 4
+                dtheta = dthetamatrix[idx]
+                pixels[idx+0] = int(abs(dtheta) / dthetamax * 255) # ALPHA
+                pixels[idx+1] = 0                                  # RED
+                pixels[idx+2] = 255                                # GREEN
+                pixels[idx+3] = 0                                  # BLUE
+
+        # pixel_alpha = int(abs(dthetamatrix) / dthetamax * 255)
+        # pixel_red = np.zeros_like(dthetamatrix)
+        # pixel_green = np.ones_like(dthetamatrix)*255
+        # pixel_blue = np.zeros_like(dthetamatrix)
+        #
+        # tex = [*sum(zip(pixel_alpha, pixel_red, pixel_green, pixel_blue), ())]
+
+        #  sdl2.SDL_UpdateTexture(tex.texture, None, pixels, win_width*4)
+        return tex, pixels
 
     def generate_device(self, arm=device.HapticDevice(False)):
         '''Generate device takes the haptic device class and turns it into two
@@ -331,10 +369,16 @@ def main():
             }
     vf = calculate.VectorField(arm, field=field, args=vf_args)
 
-    vis.vector_stream_plot(vf, arm)
+    vis.vector_stream_plot(arm, vf)
+
+    tex, pixels = vis.theta_heatmap(arm, vf, 0)
+
     running = True
     while running:
         t = time.monotonic()
+
+        sdl2.SDL_UpdateTexture(tex.texture, None, pixels, win_width*4)
+
         theta0 = np.pi/4*np.sin(t)
         theta1 = np.pi/4*np.cos(2*t)
         vis.update_device(theta0, theta1)
