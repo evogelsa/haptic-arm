@@ -188,23 +188,42 @@ class SDLWrapper():
 
     def theta_heatmap(self, vf, arm, axis):
         # TODO heatmap for theta velocities
-        # [ ] calculate ik
+        # [?] calculate ik
         # [ ] write method to impl newton-raphson (numerical ik)
         # [ ] click on point in space and it calcs config and draws arm
         # [ ] check dist to end effector to point and see if w/i tolerance
         # [ ] for range of theta0 and theta1 calc jacobian and ratio of
         #     eigenvalues of jacobian, smaller eigenvalue / bigger eigenvalue
+
+        # create matrix of coordinates holding cartesian points of each pixel
         coordmatrix = np.empty((win_height, win_width))
         for j in np.arange(0, win_height+1, 1):
             for i in np.arange(0, win_width+1, 1):
                 coordmatrix[i, j] = calculate.Coord(wpos=(i,j)).cartesian
 
+        # create array of required vectors and IK in each pixel location
         coordmatrix = coordmatrix.flatten()
-        vecmatrix = coordmatrix.copy()
-        for idx, pair in enumerate(coordmatrix):
-            dx, dy = vf.return_vectors(*pair)
+        vecmatrix = np.empty(win_width*win_height)
+        thetamatrix = np.empty(win_width*win_height)
+        for idx, xypair in enumerate(coordmatrix):
+            dx, dy = vf.return_vectors(*xypair)
             vecmatrix[idx] = np.array([dx, dy])
+            thetamatrix[idx] = arm.inv_kinematics(*xypair)
 
+        dthetamatrix = np.empty(win_width*win_height)
+        for idx, (vecs, thetas) in enumerate(zip(vecmatrix, thetamatrix)):
+            ijac = arm.inv_jacobian(*thetas)
+            dtheta = ijac @ vecs
+            dthetamatrix[idx] = dtheta
+
+        tex = self.spritefactory.create_texture_sprite(
+                self.renderer,
+                (win_width, win_height),
+                sdl2.SDL_PIXELFORMAT_ARGB8888
+        )
+
+        # update tex?
+        # sdl2.SDL_UpdateTexture(tex.texture, None, )
 
     def generate_device(self, arm=device.HapticDevice(False)):
         '''Generate device takes the haptic device class and turns it into two

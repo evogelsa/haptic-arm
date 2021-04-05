@@ -11,16 +11,11 @@ MAX_VEL0 = 4
 MAX_VEL1 = 4
 
 def step(arm, vf, vis=None):
-    # get current arm configuration in encoder counts
-    count0 = arm.odrive.axis0.encoder.shadow_count
-    count1 = arm.odrive.axis1.encoder.shadow_count
-
-    # convert counts to radians
-    theta0 = calculate.count2rad(arm, count0, 0)
-    theta1 = calculate.count2rad(arm, count1, 1)
+    # get current arm configuration
+    theta0, theta1 = arm.get_config()
 
     # get position of end effector with kinematic equations [units of meters]
-    x, y = calculate.fwd_kinematics(arm, theta0, theta1)
+    x, y = arm.fwd_kinematics(theta0, theta1)
 
     # get desired vectors from defined vector field [units of meters/s]
     dx, dy = vf.return_vectors(x, y)
@@ -30,14 +25,14 @@ def step(arm, vf, vis=None):
 
     # calculate angular velocities with inv jacobian and matrix multiplication
     # [units of rad/s]
-    ijac = calculate.inv_jacobian(arm, theta0, theta1)
+    ijac = arm.inv_jacobian(theta0, theta1)
     thetas = ijac @ vectors
     dtheta0 = thetas[0]
     dtheta1 = thetas[1]
 
     # convert rad/s to counts/s
-    dcount0 = calculate.rad2count(arm, dtheta0, 0)
-    dcount1 = calculate.rad2count(arm, dtheta1, 1)
+    dcount0 = arm.rad2count(dtheta0, 0)
+    dcount1 = arm.rad2count(dtheta1, 1)
 
     # convert counts/s to turns/s
     vel0 = dcount0 / arm.odrive.axis0.encoder.config.cpr
@@ -56,6 +51,8 @@ def step(arm, vf, vis=None):
     #  arm.odrive.axis1.controller.input_torque = vel1
 
     if vis is not None:
+        count0 = arm.rad2count(theta0)
+        count1 = arm.rad2count(theta1)
         line1 = "count0 : {:9d} | count1 : {:9d}".format(count0, count1)
         line2 = "theta0 : {:9.2f} | theta1 : {:9.2f}".format(theta0, theta1)
         line3 = "x      : {:9.2f} | y      : {:9.2f}".format(x, y)
