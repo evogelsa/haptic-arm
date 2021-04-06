@@ -203,7 +203,13 @@ class Coord():
 
     @property
     def window(self):
-        return WindowCoordinates(int(self._wpos.i+0.5), int(self._wpos.j+0.5))
+        if type(self._wpos.i) == np.ndarray and type(self._wpos.j) == np.ndarray:
+            vectorint = np.vectorize(np.int)
+            return WindowCoordinates(vectorint(self._wpos.i),
+                                     vectorint(self._wpos.j))
+        else:
+            return WindowCoordinates(int(self._wpos.i+0.5),
+                                     int(self._wpos.j+0.5))
 
     @window.setter
     def window(self, pointpair):
