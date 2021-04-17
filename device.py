@@ -166,10 +166,11 @@ class HapticDevice():
         Calcultes the elbow down configuration required to achieve the given
         end effector position. Returns a tuple joint angles in radians
         '''
+        eps = np.finfo(float).eps
         rsq = x**2 + y**2
 
         alpha = np.arccos((rsq + (self.arm0.length**2 + self.arm1.length**2))
-                          / (2 * self.arm0.length * np.sqrt(rsq)))
+                          / (2 * self.arm0.length * np.sqrt(rsq) + eps))
         beta  = np.arccos((self.arm0.length**2 + self.arm1.length**2 - rsq)
                           / (2 * self.arm0.length * self.arm1.length))
         gamma = np.arctan2(y, x)

@@ -199,21 +199,28 @@ class SDLWrapper():
         # [ ] for range of theta0 and theta1 calc jacobian and ratio of
         #     eigenvalues of jacobian, smaller eigenvalue / bigger eigenvalue
 
-        # create matrix of coordinates holding cartesian points of each pixel
+        #  create matrix of coordinates holding cartesian points of each pixel
         #  coordmatrix = np.empty((win_height, win_width), dtype=object)
-        #  for j in np.arange(0, win_height+1, 1):
-        #      for i in np.arange(0, win_width+1, 1):
+        #  for i in np.arange(0, win_height, 1):
+        #      for j in np.arange(0, win_width, 1):
         #          coordmatrix[i, j] = calculate.Coord(wpos=(i,j)).cartesian
 
         I, J = np.meshgrid(np.arange(win_height), np.arange(win_width))
-        #  griddims= I.shape
+        #  #  griddims= I.shape
         I = I.flatten()
         J = J.flatten()
 
         X, Y = calculate.Coord(wpos=(I,J)).cartesian
+
+        XYsq = X**2 + Y**2
+        lensq = arm.arm0.length**2 + arm.arm1.length**2 + 0.01**2
+        X = np.delete(X, np.argwhere((XYsq > 0.01**2) & (XYsq < lensq)))
+        Y = np.delete(Y, np.argwhere((XYsq > 0.01**2) & (XYsq < lensq)))
         #  coordmatrix = list(zip(X, Y))
 
-        # create array of required vectors and IK in each pixel location
+        I, J = calculate.Coord(cpos=(X,Y)).window
+
+        #  # create array of required vectors and IK in each pixel location
         #  coordmatrix = coordmatrix.flatten()
         #  vecmatrix = np.empty(win_width*win_height, dtype=object)
         #  thetamatrix = np.empty(win_width*win_height, dtype=object)
@@ -222,8 +229,8 @@ class SDLWrapper():
         #      vecmatrix[idx] = np.array([dx, dy])
         #      thetamatrix[idx] = arm.inv_kinematics(*xypair)
 
-        dX, dY = vf.return_vectors(X, Y)
-        Th0, Th1 = arm.inv_kinematics(X, Y)
+        #  dX, dY = vf.return_vectors(X, Y)
+        #  Th0, Th1 = arm.inv_kinematics(X, Y)
 
         #  dthetamatrix = np.empty(win_width*win_height)
         #  for idx, (vecs, thetas) in enumerate(zip(vecmatrix, thetamatrix)):
@@ -231,9 +238,9 @@ class SDLWrapper():
         #      dtheta = ijac @ vecs
         #      dthetamatrix[idx] = dtheta
 
-        dthetamatrix = np.empty(win_width*win_height)
-        for idx, (th0, th1, dx, dy) in enumerate(zip(Th0, Th1, dX, dY)):
-            dthetamatrix[idx] = arm.inv_jacobian(th0, th1) @ np.array([dx, dy])
+        #  dthetamatrix = np.empty(win_width*win_height)
+        #  for idx, (th0, th1, dx, dy) in enumerate(zip(Th0, Th1, dX, dY)):
+        #      dthetamatrix[idx] = arm.inv_jacobian(th0, th1) @ np.array([dx, dy])
 
         tex = self.spritefactory.create_texture_sprite(
                 self.renderer,
@@ -242,16 +249,20 @@ class SDLWrapper():
         )
 
         pixels = [0]*win_width*win_height*4
-        dthetamax = max(dthetamatrix)
+        #  dthetamax = max(dthetamatrix)
 
         for i in range(win_height):
             for j in range(win_width):
                 idx = (i*win_width + j) * 4
-                dtheta = dthetamatrix[idx]
-                pixels[idx+0] = int(abs(dtheta) / dthetamax * 255) # ALPHA
+                #  dtheta = dthetamatrix[idx]
+                #  pixels[idx+0] = int(abs(dtheta) / dthetamax * 255) # ALPHA
+                print(f'calculating colors ({i},{j})...')
+                pixels[idx+0] = 255 if ((i in I) and (j in J)) else 0
                 pixels[idx+1] = 0                                  # RED
                 pixels[idx+2] = 255                                # GREEN
                 pixels[idx+3] = 0                                  # BLUE
+
+        pixels = np.array(pixels, dtype=np.uint8)
 
         # pixel_alpha = int(abs(dthetamatrix) / dthetamax * 255)
         # pixel_red = np.zeros_like(dthetamatrix)
