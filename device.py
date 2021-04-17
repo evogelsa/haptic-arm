@@ -10,15 +10,23 @@ from odrive.enums import (
         CONTROL_MODE_VELOCITY_CONTROL
 )
 
+
 class HapticDevice():
     '''
     Wrapper for the SCARA arm and its associated utility functions. Stores
     objects for each arm segment and the odrive controller
     '''
+    # TODO
+    # [ ] create @property and @setter methods for arm angles
+    # [ ] " " for x, y
+
+    t0, t1 = arm.thetas # return arm._thetas
+
     def __init__(self, init_with_device=True, arm_length=0.2):
         self.odrive = odrive.find_any() if init_with_device else None
         self.arm0 = ArmSegment(arm_length)
         self.arm1 = ArmSegment(arm_length)
+        self._thetas = self.get_config()
 
     def calibrate(self, axes=[0,1]):
         '''
@@ -170,6 +178,32 @@ class HapticDevice():
         theta1 = np.pi - beta
 
         return theta0, theta1
+
+    def inv_kinematics_num(self, x, y, tol=0.005, maxdepth=20) -> tuple[float]:
+        # goal position
+        # initial guess - use arm's current pos
+        # tols - diff between prev guess and current guess
+        thetas_old = np.array(self.get_config())
+        thetas = np.array((float('inf'), float('inf')))
+
+        pd = np.array([x, y])
+
+        diff = thetas - thetas_old
+
+        depth = 0
+        while (depth < maxdepth and diff > tol):
+            p = np.array(self.fwd_kinematics(*thetas_old))
+
+            thetas = thetas_old + self.inv_jacobian(*thetas_old) @ (pd - p)
+
+            diff = (np.linalg.norm(thetas - thetas_old)
+                    / np.linalg.norm(thetas_old))
+
+            thetas_old = thetas.copy()
+
+            depth += 1
+
+        return thetas
 
     def jacobian(self, theta0: float, theta1: float) -> list[float]:
         '''
