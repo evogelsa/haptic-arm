@@ -20,13 +20,10 @@ class HapticDevice():
     # [ ] create @property and @setter methods for arm angles
     # [ ] " " for x, y
 
-    t0, t1 = arm.thetas # return arm._thetas
-
     def __init__(self, init_with_device=True, arm_length=0.2):
         self.odrive = odrive.find_any() if init_with_device else None
         self.arm0 = ArmSegment(arm_length)
         self.arm1 = ArmSegment(arm_length)
-        self._thetas = self.get_config()
 
     def calibrate(self, axes=[0,1]):
         '''
@@ -182,14 +179,20 @@ class HapticDevice():
 
     def inv_kinematics_num(self, x, y, tol=0.005, maxdepth=20) -> tuple[float]:
         # goal position
-        # initial guess - use arm's current pos
         # tols - diff between prev guess and current guess
-        thetas_old = np.array(self.get_config())
+
+        if self.odrive is not None:
+            # initial guess - use arm's current pos
+            thetas_old = np.array(self.get_config())
+        else:
+            # initial guess - use arm's home config
+            thetas_old = np.array((0, np.pi/2))
         thetas = np.array((float('inf'), float('inf')))
 
         pd = np.array([x, y])
 
         diff = thetas - thetas_old
+        diff = max(diff)
 
         depth = 0
         while (depth < maxdepth and diff > tol):

@@ -13,12 +13,8 @@ def cart2polar(x, y):
     '''
     Convert cartesian coordinates to polar
     '''
-    #  a = x + 1j * y
-    #  r = np.abs(a)
-    #  theta = np.angle(a)
     r = ((x**2) + (y**2))**.5
     theta = np.arctan2(y, x)
-
     return (r, theta)
 
 def dpolar2cart(r, theta, dr, dtheta):
@@ -160,6 +156,18 @@ class Coord():
             self._set_cart_from_polar()
             self._set_window_from_polar()
 
+    def __repr__(self):
+        cpos = f'Cartesian(x={self.cartesian.x}, y={self.cartesian.y})'
+        wpos = f'Window(i={self.window.i}, j={self.window.j})'
+        ppos = f'Polar(r={self.polar.r}, theta={self.polar.theta})'
+        coord = f'Coordinate({cpos}, {wpos}, {ppos})'
+        return coord
+
+    def __eq__(self, other):
+        x = (self.cartesian.x == other.cartesian.x)
+        y = (self.cartesian.y == other.cartesian.y)
+        return (x and y)
+
     def _set_polar_from_cart(self):
         #  a = self._cpos.x + 1j * self._cpos.y
         #  r = np.abs(a)
@@ -299,11 +307,14 @@ class VectorField():
                 'spiralbound' : self.spiralbound,
                 'spring' : self.spring,
                 }
+
     def return_vectors(self, x, y):
+        '''Return vectors appropriate to field type'''
         if self.field is None or self.args is None:
             raise ValueError('Field and arguments must be defined before'
                              + ' vectors can be returned')
         return self._fields[self.field](x, y)
+
     def spring(self, x, y):
         try:
             xcenter = self.args['xcenter']
@@ -316,12 +327,12 @@ class VectorField():
         y -= ycenter
 
         r, theta = cart2polar(x, y)
-
         dr = map(r, 0, self.arm.arm0.length, 0, -drmax)
 
         dx, dy = dpolar2cart(r, theta, dr, 0)
 
         return dx, dy
+
     def circle(self, x, y):
         try:
             xcenter = self.args['xcenter']
@@ -338,6 +349,7 @@ class VectorField():
         dx, dy = dpolar2cart(r, theta, 0, dtheta)
 
         return dx, dy
+
     def circlebound(self, x, y):
         try:
             radius  = self.args['radius']
@@ -371,6 +383,7 @@ class VectorField():
 
         dx, dy = dpolar2cart(r, theta, dr, 0)
         return dx, dy
+
     def spiralbound(self, x, y):
         dx0, dy0 = self.circlebound(x, y)
         dx1, dy1 = self.circle(x, y)
