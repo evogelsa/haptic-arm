@@ -166,14 +166,14 @@ class HapticDevice():
         eps = np.finfo(float).eps
         rsq = x**2 + y**2
 
-        alpha = np.arccos((rsq + (self.arm0.length**2 + self.arm1.length**2))
+        alpha = np.arccos((rsq + (self.arm0.length**2 - self.arm1.length**2))
                           / (2 * self.arm0.length * np.sqrt(rsq) + eps))
         beta  = np.arccos((self.arm0.length**2 + self.arm1.length**2 - rsq)
                           / (2 * self.arm0.length * self.arm1.length))
         gamma = np.arctan2(y, x)
 
         theta0 = gamma - alpha
-        theta1 = np.pi - beta
+        theta1 = beta - theta0
 
         return theta0, theta1
 
@@ -186,19 +186,21 @@ class HapticDevice():
             thetas_old = np.array(self.get_config())
         else:
             # initial guess - use arm's home config
-            thetas_old = np.array((0, np.pi/2))
-        thetas = np.array((float('inf'), float('inf')))
+            thetas_old = np.array((-np.pi/4, np.pi/2))
+
+        #  thetas = np.array((float('inf'), float('inf')))
+        #
+        #  diff = thetas - thetas_old
+        #  diff = max(diff)
 
         pd = np.array([x, y])
-
-        diff = thetas - thetas_old
-        diff = max(diff)
+        diff = float('inf')
 
         depth = 0
         while (depth < maxdepth and diff > tol):
             p = np.array(self.fwd_kinematics(*thetas_old))
 
-            thetas = thetas_old + self.inv_jacobian(*thetas_old) @ (pd - p)
+            thetas = thetas_old + 0.5*self.inv_jacobian(*thetas_old) @ (pd - p)
 
             diff = (np.linalg.norm(thetas - thetas_old)
                     / np.linalg.norm(thetas_old))
@@ -206,6 +208,10 @@ class HapticDevice():
             thetas_old = thetas.copy()
 
             depth += 1
+
+        #  print(f'depth: {depth} | diff: {diff}')
+
+        thetas = np.mod(thetas + np.pi, 2*np.pi) - np.pi
 
         return thetas
 
@@ -222,7 +228,7 @@ class HapticDevice():
         '''
         Given two arm angles in radians, return the inverse jacobian
         '''
-        np.linalg.pinv(self.jacobian(theta0, theta1))
+        return np.linalg.pinv(self.jacobian(theta0, theta1))
 
     def rad2count(self, theta: float, axis: int) -> int:
         '''

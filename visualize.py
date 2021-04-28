@@ -1,7 +1,9 @@
 import calculate
 import device
 
+import collections
 import matplotlib.pyplot as plt
+import seaborn as sb
 import numpy as np
 import time
 import os
@@ -72,6 +74,10 @@ class ArmSegment(sdl2.ext.Entity):
                               win_height=win_height)
         return end.polar.r, end.polar.theta
 
+    def get_config(self):
+        '''returns the equivalent joint angle of the arm segment'''
+        return np.radians(-self.sprite.angle)
+
     def update(self, wposj, wposi, angle):
         '''Sets the position and angle of the segment on the window to the
         given window coordinates and angle'''
@@ -99,6 +105,7 @@ class SDLWrapper():
         self.world = world
         self.spriterenderer = spriterenderer
         self.vectors = None
+        self.config_buffer = collections.deque([])
 
         # init sdl systems
         sdl2.ext.init()
@@ -171,7 +178,7 @@ class SDLWrapper():
             for x in np.arange(0, win_width//step_size*step_size+1, step_size):
                 # add initial point to squares and start a vector line
                 vector = []
-                coord = calculate.Coord(wpos=(x, y), win_width=win_width,
+                coord = calculate.Coord(wpos=(y, x), win_width=win_width,
                                         win_height=win_height)
                 vector.extend((int(coord.window.j), int(coord.window.i)))
                 self.squares.append((x-3, y-3, 6, 6))
@@ -198,14 +205,22 @@ class SDLWrapper():
         # [ ] for range of theta0 and theta1 calc jacobian and ratio of
         #     eigenvalues of jacobian, smaller eigenvalue / bigger eigenvalue
 
-        I, J = np.meshgrid(np.arange(win_height), np.arange(win_width))
+        print('analytical:', arm.inv_kinematics(0, 0.4))
+        print('numerical:', arm.inv_kinematics_num(0, 0.4))
+
+        binsz = 20
+        num_samples = win_width*win_height // (binsz**2)
+
+        I, J = np.meshgrid(np.arange(0, win_height, binsz),
+                           np.arange(0, win_width, binsz))
+        #  print(I.shape, J.shape)
         I = I.flatten()
         J = J.flatten()
 
         X, Y = calculate.Coord(wpos=(I,J)).cartesian
 
-        XYsq = X**2 + Y**2
-        lensq = arm.arm0.length**2 + arm.arm1.length**2 + 0.01**2
+        #  XYsq = X**2 + Y**2
+        #  lensq = arm.arm0.length**2 + arm.arm1.length**2 + 0.01**2
         #  X = np.delete(X, np.argwhere((XYsq > 0.01**2) & (XYsq < lensq)))
         #  Y = np.delete(Y, np.argwhere((XYsq > 0.01**2) & (XYsq < lensq)))
 
@@ -213,23 +228,55 @@ class SDLWrapper():
 
         dX, dY = vf.return_vectors(X, Y)
 
-        Th0 = np.empty(win_width*win_height)
-        Th1 = np.empty(win_width*win_height)
-        for idx, (x, y) in enumerate(zip(X, Y)):
-            theta0, theta1 = arm.inv_kinematics_num(x, y)
-            Th0[idx] = theta0
-            Th1[idx] = theta1
+        if os.path.isfile('data.npz'):
+            data = np.load('data.npz')
+            dthetamatrix0 = data['dthetamatrix0']
+            dthetamatrix1 = data['dthetamatrix1']
+            Th0 = data['Th0']
+            Th1 = data['Th1']
+        else:
+            Th0 = np.empty(num_samples)
+            Th1 = np.empty(num_samples)
+            for idx, (x, y) in enumerate(zip(X, Y)):
+                theta0, theta1 = arm.inv_kinematics_num(x, y)
+                Th0[idx] = theta0
+                Th1[idx] = theta1
+                if idx % 100 == 0:
+                    print(idx)
 
-        dthetamatrix0 = np.empty(win_width*win_height, dtype=object)
-        dthetamatrix1 = np.empty(win_width*win_height, dtype=object)
-        for idx, (th0, th1, dx, dy) in enumerate(zip(Th0, Th1, dX, dY)):
-            dthetas = arm.inv_jacobian(th0, th1) @ np.array([dx, dy])
-            dthetamatrix0[idx] = dthetas[0]
-            dthetamatrix1[idx] = dthetas[1]
+            dthetamatrix0 = np.empty(num_samples)
+            dthetamatrix1 = np.empty(num_samples)
+            for idx, (th0, th1, dx, dy) in enumerate(zip(Th0, Th1, dX, dY)):
+                dthetas = arm.inv_jacobian(th0, th1) @ np.array([dx, dy])
+                dthetamatrix0[idx] = dthetas[0]
+                dthetamatrix1[idx] = dthetas[1]
+                if idx % 100 == 0:
+                    print(idx)
 
-        plt.imshow(dthetamatrix0)
+            np.savez_compressed('data', Th0=Th0, Th1=Th1,
+                                dthetamatrix0=dthetamatrix0,
+                                dthetamatrix1=dthetamatrix1)
+
+        #  for row in dthetamatrix0.reshape((win_width//binsz, win_height//binsz)):
+        #      print(row)
+
+        plt.figure(figsize=(win_width/100, win_height/100))
+        sb.heatmap(dthetamatrix0.reshape((win_width//binsz, win_height//binsz)),
+                   vmin=-2, vmax=2,
+                   cbar=False, xticklabels=False, yticklabels=False)
         plt.savefig('dtheta0.png')
-        plt.show()
+        sb.heatmap(Th0.reshape((win_width//binsz, win_height//binsz)),
+                   vmin=-2*np.pi, vmax=2*np.pi)
+        plt.savefig('theta0.png')
+
+        plt.figure(figsize=(win_width/100, win_height/100))
+        sb.heatmap(dthetamatrix1.reshape((win_width//binsz, win_height//binsz)),
+                   vmin=-2, vmax=2,
+                   cbar=False, xticklabels=False, yticklabels=False)
+        plt.savefig('dtheta1.png')
+        sb.heatmap(Th1.reshape((win_width//binsz, win_height//binsz)),
+                   vmin=-2*np.pi, vmax=2*np.pi)
+        plt.savefig('theta1.png')
 
     def generate_device(self, arm=device.HapticDevice(init_with_device=False)):
         '''Generate device takes the haptic device class and turns it into two
@@ -237,11 +284,8 @@ class SDLWrapper():
         arm0_sprite = self.spritefactory.from_color(
                 BLUE,
                 size=(30,int(arm.arm0.length*calculate.PIXELS_PER_METER)))
-        arm0 = ArmSegment(self.world,
-                          arm0_sprite,
-                          wposj=win_width/2,
-                          wposi=0,
-                          angle=0)
+        arm0 = ArmSegment(self.world, arm0_sprite, wposj=win_width/2,
+                          wposi=0, angle=0)
 
         endr, endtheta = arm0.get_end()
         pos = calculate.Coord(ppos=(endr, endtheta), win_width=win_width,
@@ -249,25 +293,37 @@ class SDLWrapper():
         arm1_sprite = self.spritefactory.from_color(
                 ORANGE,
                 size=(30,int(arm.arm1.length*calculate.PIXELS_PER_METER)))
-        arm1 = ArmSegment(self.world,
-                          arm1_sprite,
-                          wposj=pos.window.j,
-                          wposi=pos.window.i,
-                          angle=0)
+        arm1 = ArmSegment(self.world, arm1_sprite, wposj=pos.window.j,
+                          wposi=pos.window.i, angle=0)
         self.arms = (arm0, arm1)
 
     def update_device(self, theta0, theta1):
         '''Updates the device configuration with the given angles'''
         pos = self.arms[0].sprite.pos
-        angle = np.degrees(-theta0) # pi - theta0
-        self.arms[0].update(pos.window.j, pos.window.i, angle)
+        angle0 = np.degrees(-theta0) # pi - theta0
+        self.arms[0].update(pos.window.j, pos.window.i, angle0)
 
         r, theta = self.arms[0].get_end()
         pos = calculate.Coord(ppos=(r, theta), win_width=win_width,
                               win_height=win_height)
-        angle = np.degrees(-theta1)
-        self.arms[1].update(pos.window.j, pos.window.i, angle)
+        angle1 = np.degrees(-theta1)
+        self.arms[1].update(pos.window.j, pos.window.i, angle1)
 
+    def smooth_move_to_location(self, arm, x, y, resolution=0.001):
+        if (len(self.config_buffer) > 0):
+            thetas = self.config_buffer[-1]
+        else:
+            thetas = [arm.get_config() for arm in self.arms]
+
+        p = arm.fwd_kinematics(*thetas)
+        pd = np.array([x, y])
+
+        v = np.array([x, y]) - np.array(p)
+        vhat = v / np.linalg.norm(v)
+
+        while (np.linalg.norm(pd - (p := resolution*vhat + p)) > resolution):
+            thetas = arm.inv_kinematics_num(*p)
+            self.config_buffer.append(thetas)
 
     # run simulation
     def step(self):
@@ -302,16 +358,6 @@ class SDLWrapper():
             sdl2.SDL_Delay(int((1/60*1000)-(elapsed_time*1000)))
             elapsed_time = time.monotonic() - frame_start
 
-def check_running():
-    '''check_running returns false if the visualization window has been closed,
-    otherwise true'''
-    events = sdl2.ext.get_events()
-    for event in events:
-        if event.type == sdl2.SDL_QUIT:
-            sdl2.ext.quit()
-            return False
-    return True
-
 def main():
     # init visualization stuff
     vis = SDLWrapper()
@@ -325,7 +371,7 @@ def main():
         if field not in calculate.VectorField(arm)._fields.keys():
             raise UserWarning('Supplied field type does not exist')
     else:
-        field = 'spiralbound'
+        field = 'circle'
 
     vf_args = {
             'xcenter': np.sqrt(2)*arm.arm0.length,
@@ -341,15 +387,34 @@ def main():
 
     vis.theta_heatmap(arm, vf, 0)
 
+    vis.update_device(0, np.pi/2)
+
+    x, y = 0, 0
+    i, j = 0, 0
+    recalculate = False
+
     running = True
     while running:
         t = time.monotonic()
 
-        sdl2.SDL_UpdateTexture(tex.texture, None, pixels, win_width*4)
+        #  sdl2.SDL_UpdateTexture(tex.texture, None, pixels, win_width*4)
 
-        theta0 = np.pi/4*np.sin(t)
-        theta1 = np.pi/4*np.cos(2*t)
-        vis.update_device(theta0, theta1)
+        if '-animate' in sys.argv:
+            theta0 = np.pi/4*np.sin(t)
+            theta1 = np.pi/4*np.cos(2*t)
+            vis.update_device(theta0, theta1)
+        elif '-follow' in sys.argv:
+            if recalculate:
+                print(f'xy: ({x}, {y}) | ij: ({i}, {j})')
+                vis.smooth_move_to_location(arm, x, y)
+                recalculate = False
+                if (len(vis.config_buffer) > 0):
+                    vis.update_device(*vis.config_buffer.popleft())
+            elif (len(vis.config_buffer) > 0):
+                vis.update_device(*vis.config_buffer.popleft())
+        else:
+            theta0, theta1 = 0, np.pi/2
+            vis.update_device(theta0, theta1)
 
         text = [[str(vis.arms[0].get_end()[0])[:5],
                  str(vis.arms[0].get_end()[1])[:5]],
@@ -362,8 +427,15 @@ def main():
         events = sdl2.ext.get_events()
         for event in events:
             if event.type == sdl2.SDL_QUIT:
+                sdl2.ext.quit()
                 running = False
                 break
+            if event.type == sdl2.SDL_MOUSEMOTION:
+                j, i = event.motion.x, event.motion.y
+            if event.type == sdl2.SDL_MOUSEBUTTONDOWN:
+                if event.button.button == sdl2.SDL_BUTTON_LEFT:
+                    x, y = calculate.Coord(wpos=(i, j)).cartesian
+                    recalculate = True
 
 if __name__ == "__main__":
     sys.exit(main())
