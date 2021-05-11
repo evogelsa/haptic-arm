@@ -27,8 +27,7 @@ def step(arm, vf, vis=None):
     # [units of rad/s]
     ijac = arm.inv_jacobian(theta0, theta1)
     thetas = ijac @ vectors
-    dtheta0 = thetas[0]
-    dtheta1 = thetas[1]
+    dtheta0, dtheta1 = thetas
 
     # convert rad/s to counts/s
     dcount0 = arm.rad2count(dtheta0, 0)

@@ -10,25 +10,25 @@ PIXELS_PER_METER = 1000
 
 
 def cart2polar(x, y):
-    '''
+    """
     Convert cartesian coordinates to polar
-    '''
+    """
     r = ((x**2) + (y**2))**.5
     theta = np.arctan2(y, x)
     return (r, theta)
 
 def dpolar2cart(r, theta, dr, dtheta):
-    '''
+    """
     Convert polar velocities to cartesian
-    '''
+    """
     dx = dr * np.cos(theta) - r * np.sin(theta) * dtheta
     dy = dr * np.sin(theta) + r * np.cos(theta) * dtheta
     return dx, dy
 
 def map(v, vmin, vmax, tmin, tmax):
-    '''
+    """
     Map a given value in a range [vmin,vmax] to a target range [tmin,tmax]
-    '''
+    """
     v = min(v, vmax)
     v = max(v, vmin)
     vrange = vmax - vmin
@@ -38,9 +38,9 @@ def map(v, vmin, vmax, tmin, tmax):
     return tv
 
 def count2rad(arm, count, axis):
-    '''
+    """
     Convert encoder counts to radians
-    '''
+    """
     warnings.warn(
             'calculate.count2rad deprecated: use device method instead',
             DeprecationWarning
@@ -55,9 +55,9 @@ def count2rad(arm, count, axis):
         raise
 
 def rad2count(arm, theta, axis):
-    '''
+    """
     Convert radians to encoder counts
-    '''
+    """
     warnings.warn(
             'calculate.rad2count depcrated: use device method instead',
             DeprecationWarning
@@ -72,10 +72,10 @@ def rad2count(arm, theta, axis):
         raise
 
 def fwd_kinematics(arm, theta0, theta1):
-    '''
+    """
     Calculate the end effector position in cartesian coordinates from the
     given arm configuration
-    '''
+    """
     warnings.warn(
             'calculate.fwd_kinematics deprecated: use device method',
             DeprecationWarning
@@ -85,9 +85,9 @@ def fwd_kinematics(arm, theta0, theta1):
     return x, y
 
 def jacobian(arm, theta0, theta1):
-    '''
+    """
     Return the jacobian matrix from the given arm angles
-    '''
+    """
     warnings.warn(
             'calculate.jacobain deprecated: use device method',
             DeprecationWarning
@@ -98,9 +98,9 @@ def jacobian(arm, theta0, theta1):
                       arm.arm1.length * np.cos(theta1)]])
 
 def inv_jacobian(arm, theta0, theta1):
-    '''
+    """
     Return the inverted jacobian matrix
-    '''
+    """
     warnings.warn(
             'calculate.inv_jacobian deprecated: use device method',
             DeprecationWarning
@@ -108,17 +108,17 @@ def inv_jacobian(arm, theta0, theta1):
     return np.linalg.pinv(jacobian(arm, theta0, theta1))
 
 class Coord():
-    '''
+    """
     Coord is a class to store position data on the visualization in different
     forms. Stores cartesian, polar, and window (graphics) coordinates and auto
     updates each form when one is set
-    '''
+    """
     def __init__(self, cpos=None, wpos=None, ppos=None,
                  win_width=800, win_height=600):
-        '''
+        """
         When a coord is initialized, if multiple kinds of coordinates are
         passed, cartesian coordinates are given priority.
-        '''
+        """
         self._cpos = None
         self._wpos = None
         self._ppos = None
@@ -309,7 +309,7 @@ class VectorField():
                 }
 
     def return_vectors(self, x, y):
-        '''Return vectors appropriate to field type'''
+        """Return vectors appropriate to field type"""
         if self.field is None or self.args is None:
             raise ValueError('Field and arguments must be defined before'
                              + ' vectors can be returned')
