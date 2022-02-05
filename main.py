@@ -10,6 +10,7 @@ import numpy as np
 MAX_VEL0 = 4
 MAX_VEL1 = 4
 
+
 def step(arm, vf, vis=None):
     # get current arm configuration
     theta0, theta1 = arm.get_config()
@@ -59,22 +60,26 @@ def step(arm, vf, vis=None):
         line5 = "dtheta0: {:9.2f} | dtheta1: {:9.2f}".format(dtheta0, dtheta1)
         line6 = "dcount0: {:9.2f} | dcount1: {:9.2f}".format(dcount0, dcount1)
         line7 = "vel0   : {:9.2f} | vel1   : {:9.2f}".format(vel0, vel1)
-        paragraph = [[line1],
-                     [line2],
-                     [line3],
-                     [line4],
-                     [line5],
-                     [line6],
-                     [line7]]
+        paragraph = [
+            [line1],
+            [line2],
+            [line3],
+            [line4],
+            [line5],
+            [line6],
+            [line7],
+        ]
         vis.text(paragraph, size=16)
         vis.update_device(theta0, theta1)
         vis.step()
+
 
 def stop(arm):
     try:
         arm.restart()
     except:
         print('Device restarted')
+
 
 def main():
     # instantiate a haptic device (connects to odrive)
@@ -100,40 +105,75 @@ def main():
 
     # parse cl arguments
     parser = ArgumentParser(description='Parse field parameters')
-    parser.add_argument('-x', '--xcenter', dest='xcenter', type=float,
-                        default=np.sqrt(2)*arm.arm0.length,
-                        help='center of vector field in x direction')
-    parser.add_argument('-y', '--ycenter', dest='ycenter', type=float,
-                        default=0,
-                        help='center of vector field in y direction')
-    parser.add_argument('-dt', '--dtheta', dest='dtheta', type=float,
-                        default=0.5,
-                        help='rotational speed of vector field')
-    parser.add_argument('-r', '--radius',  dest='radius', type=float,
-                        default=arm.arm0.length/4,
-                        help='radius from field center for deadband')
-    parser.add_argument('-b', '--buffer',  dest='buffer', type=float,
-                        default=arm.arm0.length/4 * .05,
-                        help='size of deadband')
-    parser.add_argument('-dr', '--drmax',  dest='drmax', type=float,
-                        default=0.5,
-                        help='the max radial speed towards center of field')
-    parser.add_argument('-f', '--field',   dest='field', type=str,
-                        default='spiralbound',
-                        help='field type: circle, circlebound, spiral, ' +
-                        'spiralbound, spring')
+    parser.add_argument(
+        '-x',
+        '--xcenter',
+        dest='xcenter',
+        type=float,
+        default=np.sqrt(2) * arm.arm0.length,
+        help='center of vector field in x direction',
+    )
+    parser.add_argument(
+        '-y',
+        '--ycenter',
+        dest='ycenter',
+        type=float,
+        default=0,
+        help='center of vector field in y direction',
+    )
+    parser.add_argument(
+        '-dt',
+        '--dtheta',
+        dest='dtheta',
+        type=float,
+        default=0.5,
+        help='rotational speed of vector field',
+    )
+    parser.add_argument(
+        '-r',
+        '--radius',
+        dest='radius',
+        type=float,
+        default=arm.arm0.length / 4,
+        help='radius from field center for deadband',
+    )
+    parser.add_argument(
+        '-b',
+        '--buffer',
+        dest='buffer',
+        type=float,
+        default=arm.arm0.length / 4 * 0.05,
+        help='size of deadband',
+    )
+    parser.add_argument(
+        '-dr',
+        '--drmax',
+        dest='drmax',
+        type=float,
+        default=0.5,
+        help='the max radial speed towards center of field',
+    )
+    parser.add_argument(
+        '-f',
+        '--field',
+        dest='field',
+        type=str,
+        default='spiralbound',
+        help='field type: circle, circlebound, spiral, '
+        + 'spiralbound, spring',
+    )
     args = parser.parse_args()
 
     # instantiate vector field for arm
     vf_args = {
-            'xcenter': args.xcenter,
-            'ycenter': args.ycenter,
-            'dtheta' : args.dtheta,
-            'radius' : args.radius,
-            'buffer' : args.buffer,
-            'drmax'  : args.drmax,
-            }
-    field=args.field
+        'xcenter': args.xcenter,
+        'ycenter': args.ycenter,
+        'dtheta': args.dtheta,
+        'radius': args.radius,
+        'buffer': args.buffer,
+        'drmax': args.drmax,
+    }
+    field = args.field
     vf = calculate.VectorField(arm, field=field, args=vf_args)
 
     # create visualization window
@@ -151,6 +191,7 @@ def main():
         stop(arm)
     except KeyboardInterrupt:
         stop(arm)
+
 
 if __name__ == "__main__":
     exit(main())

@@ -20,3 +20,6 @@ singleplot.py
 *.swp
 __pycache__/
 *.py[cod]
+
+# venv
+venv/
