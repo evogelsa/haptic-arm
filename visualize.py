@@ -36,6 +36,9 @@ win_height = 600
 # simulation rate
 elapsed_time = 0
 
+theta0 = 0
+theta1 = np.pi / 2
+
 # Render system to handle rendering texture sprites (the robot)
 class TextureRenderSystem(sdl2.ext.TextureSpriteRenderSystem):
     """TextureRenderSystem is a class which converts texures to sdl sprites"""
@@ -54,6 +57,7 @@ class ArmSegment(sdl2.ext.Entity):
         pos = calculate.Coord(
             wpos=(wposi, wposj), win_width=win_width, win_height=win_height
         )
+        self.world = world
         self.sprite = sprite
         self.sprite.pos = pos
         self.sprite.angle = angle
@@ -247,7 +251,7 @@ class SDLWrapper:
         #  print('numerical:', arm.inv_kinematics_num(0, 0.4))
 
         binsz = 1
-        num_samples = win_width * win_height // (binsz ** 2)
+        num_samples = win_width * win_height // (binsz**2)
 
         I, J = np.meshgrid(
             np.arange(0, win_height, binsz), np.arange(0, win_width, binsz)
@@ -462,7 +466,8 @@ def main():
     if '-hm' in sys.argv:
         vis.theta_heatmap(arm, vf, 0)
 
-    vis.update_device(0, np.pi / 2)
+    global theta0, theta1
+    vis.update_device(theta0, theta1)
 
     x, y = 0, 0
     i, j = 0, 0
@@ -470,11 +475,8 @@ def main():
 
     running = True
     while running:
-        t = time.monotonic()
-
-        #  sdl2.SDL_UpdateTexture(tex.texture, None, pixels, win_width*4)
-
         if '-animate' in sys.argv:
+            t = time.monotonic()
             theta0 = np.pi / 4 * np.sin(t)
             theta1 = np.pi / 4 * np.cos(2 * t)
             vis.update_device(theta0, theta1)
@@ -487,6 +489,25 @@ def main():
                     vis.update_device(*vis.config_buffer.popleft())
             elif len(vis.config_buffer) > 0:
                 vis.update_device(*vis.config_buffer.popleft())
+        elif '-simulate' in sys.argv:
+            # get x, y of end effector
+            x, y = arm.fwd_kinematics(theta0, theta1)
+
+            # get desired vector from vectorfield
+            dx, dy = vf.return_vectors(x, y)
+            vectors = np.array([dx, dy])
+
+            # calculate the needed angular velocities
+            ijac = arm.inv_jacobian(theta0, theta1)
+            thetas = np.matmul(ijac, vectors)
+            dtheta0, dtheta1 = thetas
+
+            # update arm angles
+            theta0 += dtheta0 * elapsed_time
+            theta1 += dtheta1 * elapsed_time
+
+            # update visualization
+            vis.update_device(theta0, theta1)
         else:
             theta0, theta1 = 0, np.pi / 2
             vis.update_device(theta0, theta1)
