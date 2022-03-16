@@ -251,7 +251,7 @@ class SDLWrapper:
         #  print('numerical:', arm.inv_kinematics_num(0, 0.4))
 
         binsz = 1
-        num_samples = win_width * win_height // (binsz ** 2)
+        num_samples = win_width * win_height // (binsz**2)
 
         I, J = np.meshgrid(
             np.arange(0, win_height, binsz), np.arange(0, win_width, binsz)
@@ -396,7 +396,7 @@ class SDLWrapper:
 
         num_ik = arm.inv_kinematics_num(*pd)
         an_ik = arm.inv_kinematics(*pd)
-        print(f'num ik: {num_ik} | ana ik: {an_ik}')
+        #  print(f'num ik: {num_ik} | ana ik: {an_ik}')
 
         while np.linalg.norm(pd - (p := resolution * vhat + p)) > resolution:
             thetas = arm.inv_kinematics_num(*p)
@@ -492,41 +492,50 @@ def main():
                 vis.update_device(*vis.config_buffer.popleft())
 
         elif '-simulate' in sys.argv:
-            # get x, y of end effector
-            x, y = arm.fwd_kinematics(theta0, theta1)
+            if recalculate:
+                recalculate = False
+                vis.smooth_move_to_location(arm, x, y)
 
-            # get desired vector from vectorfield
-            dx, dy = vf.return_vectors(x, y)
-            vectors = np.array([dx, dy])
+            elif len(vis.config_buffer) > 0:
+                theta0, theta1 = vis.config_buffer.popleft()
+                vis.update_device(theta0, theta1)
 
-            # calculate the needed angular velocities
-            ijac = arm.inv_jacobian(theta0, theta1)
-            thetas = np.matmul(ijac, vectors)
-            dtheta0, dtheta1 = thetas
+            else:
+                # get x, y of end effector
+                x, y = arm.fwd_kinematics(theta0, theta1)
 
-            # update arm angles
-            theta0 += dtheta0 * elapsed_time
-            theta1 += dtheta1 * elapsed_time
+                # get desired vector from vectorfield
+                dx, dy = vf.return_vectors(x, y)
+                vectors = np.array([dx, dy])
 
-            # update visualization
-            vis.update_device(theta0, theta1)
+                # calculate the needed angular velocities
+                ijac = arm.inv_jacobian(theta0, theta1)
+                thetas = np.matmul(ijac, vectors)
+                dtheta0, dtheta1 = thetas
 
-            # write diagnostic text to window
-            text = [
-                [
-                    f'x:       {x:6.3f}, y:       {y:6.3f}',
-                ],
-                [
-                    f'dx:      {dx:6.3f}, dy:      {dy:6.3f}',
-                ],
-                [
-                    f'theta0:  {theta0:6.3f}, theta1:  {theta1:6.3f}',
-                ],
-                [
-                    f'dtheta0: {dtheta0:6.3f}, dtheta1: {dtheta1:6.3f}',
-                ],
-            ]
-            vis.text(text)
+                # update arm angles
+                theta0 += dtheta0 * elapsed_time
+                theta1 += dtheta1 * elapsed_time
+
+                # update visualization
+                vis.update_device(theta0, theta1)
+
+                # write diagnostic text to window
+                text = [
+                    [
+                        f'x:       {x:6.3f}, y:       {y:6.3f}',
+                    ],
+                    [
+                        f'dx:      {dx:6.3f}, dy:      {dy:6.3f}',
+                    ],
+                    [
+                        f'theta0:  {theta0:6.3f}, theta1:  {theta1:6.3f}',
+                    ],
+                    [
+                        f'dtheta0: {dtheta0:6.3f}, dtheta1: {dtheta1:6.3f}',
+                    ],
+                ]
+                vis.text(text)
 
         else:
             theta0, theta1 = 0, np.pi / 2
