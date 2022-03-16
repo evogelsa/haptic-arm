@@ -251,7 +251,7 @@ class SDLWrapper:
         #  print('numerical:', arm.inv_kinematics_num(0, 0.4))
 
         binsz = 1
-        num_samples = win_width * win_height // (binsz**2)
+        num_samples = win_width * win_height // (binsz ** 2)
 
         I, J = np.meshgrid(
             np.arange(0, win_height, binsz), np.arange(0, win_width, binsz)
@@ -480,6 +480,7 @@ def main():
             theta0 = np.pi / 4 * np.sin(t)
             theta1 = np.pi / 4 * np.cos(2 * t)
             vis.update_device(theta0, theta1)
+
         elif '-follow' in sys.argv:
             if recalculate:
                 print(f'xy: ({x}, {y}) | ij: ({i}, {j})')
@@ -489,6 +490,7 @@ def main():
                     vis.update_device(*vis.config_buffer.popleft())
             elif len(vis.config_buffer) > 0:
                 vis.update_device(*vis.config_buffer.popleft())
+
         elif '-simulate' in sys.argv:
             # get x, y of end effector
             x, y = arm.fwd_kinematics(theta0, theta1)
@@ -508,21 +510,27 @@ def main():
 
             # update visualization
             vis.update_device(theta0, theta1)
+
+            # write diagnostic text to window
+            text = [
+                [
+                    f'x:       {x:6.3f}, y:       {y:6.3f}',
+                ],
+                [
+                    f'dx:      {dx:6.3f}, dy:      {dy:6.3f}',
+                ],
+                [
+                    f'theta0:  {theta0:6.3f}, theta1:  {theta1:6.3f}',
+                ],
+                [
+                    f'dtheta0: {dtheta0:6.3f}, dtheta1: {dtheta1:6.3f}',
+                ],
+            ]
+            vis.text(text)
+
         else:
             theta0, theta1 = 0, np.pi / 2
             vis.update_device(theta0, theta1)
-
-        text = [
-            [
-                str(vis.arms[0].get_end()[0])[:5],
-                str(vis.arms[0].get_end()[1])[:5],
-            ],
-            [
-                str(vis.arms[1].sprite.pos.window.j)[:5],
-                str(vis.arms[1].sprite.pos.window.i)[:5],
-            ],
-        ]
-        vis.text(text)
 
         vis.step()
         # check for window being closed or keypresses and keyboard control
