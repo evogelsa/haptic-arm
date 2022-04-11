@@ -1,12 +1,11 @@
 # TO DO
 
-## Vector Fields
+## Visualization
 
-1. Correct vector fields
-    - Circlebound goes outwards only
-    - Spiralbound relies on circle bound
-    - Verify spring
-    - Add vector field that has deadband on outer parts of field
+1. [x] Add traces that follow path of arm
+2. [ ] Add workspace for arm
+3. [ ] Ghost arm simulation/visualization
+4. [ ] Heat map of workspace that maps condition number
 
 ## Main
 

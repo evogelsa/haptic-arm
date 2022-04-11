@@ -126,6 +126,7 @@ class SDLWrapper:
         spritefactory=None,
         world=None,
         spriterenderer=None,
+        tracelen=500,
     ):
         self.window = window
         self.renderer = renderer
@@ -133,8 +134,11 @@ class SDLWrapper:
         self.spritefactory = spritefactory
         self.world = world
         self.spriterenderer = spriterenderer
+        self.trace = tracelen > 0
+
         self.vectors = None
         self.config_buffer = collections.deque([])
+        self.trace_buffer = collections.deque(maxlen=tracelen)
 
         # init sdl systems
         sdl2.ext.init()
@@ -419,9 +423,16 @@ class SDLWrapper:
             self.renderer.draw_rect(self.squares, color=WHITE)
             self.renderer.fill(self.center, color=GREEN)
 
+        # render traces
+        if self.trace:
+            p = calculate.Coord(ppos=self.arms[1].get_end())
+            self.trace_buffer.append((p.j - 2, p.i - 2, 4, 4))
+            self.renderer.fill(self.trace_buffer, color=RED)
+
         # render arm sprites
         for arm in self.arms:
             arm.draw(self.spriterenderer)
+
         # render text sprites onto window
         if self.text_sprites:
             self.spriterenderer.render(self.text_sprites)
@@ -462,6 +473,7 @@ def init_args():
         type=float,
         required=False,
         help='x coordinate for center of the vector field',
+        metavar='X',
     )
     parser.add_argument(
         '--ycenter',
@@ -471,6 +483,7 @@ def init_args():
         type=float,
         required=False,
         help='y coordinate for center of the vector field',
+        metavar='Y',
     )
     parser.add_argument(
         '--dtheta',
@@ -524,6 +537,16 @@ def init_args():
             " end effector to clicked location, 'none': do nothing"
         ),
     )
+    parser.add_argument(
+        '--trace',
+        '-t',
+        action='store',
+        default=500,
+        type=int,
+        required=False,
+        help='how many points to draw to trace end effector',
+        metavar='N',
+    )
 
     return parser.parse_args()
 
@@ -532,7 +555,7 @@ def main():
     args = init_args()
 
     # init visualization stuff
-    vis = SDLWrapper()
+    vis = SDLWrapper(tracelen=args.trace)
     vis.generate_device()
 
     arm = device.HapticDevice(False)
