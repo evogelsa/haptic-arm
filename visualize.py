@@ -517,7 +517,12 @@ def init_args():
         action='store',
         required=True,
         choices=['animate', 'simulate', 'follow', 'none'],
-        help="'animate': arm is animated according to sin and cos function ignoring vector field, 'simulate': arm dynamics are simulated for the given vector field, 'follow': arm is animated to move end effector to clicked location, 'none': do nothing",
+        help=(
+            "'animate': arm is animated according to sin and cos function"
+            " ignoring vector field, 'simulate': arm dynamics are simulated"
+            " for the given vector field, 'follow': arm is animated to move"
+            " end effector to clicked location, 'none': do nothing"
+        ),
     )
 
     return parser.parse_args()
