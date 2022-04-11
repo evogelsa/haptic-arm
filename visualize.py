@@ -8,6 +8,8 @@ import numpy as np
 import time
 import os
 import sys
+import argparse
+
 
 # check for OS and add sdl dlls if on windows
 if sys.platform == 'win32':
@@ -436,7 +438,27 @@ class SDLWrapper:
             elapsed_time = time.monotonic() - frame_start
 
 
+def init_args():
+    parser = argparse.ArgumentParser(prog='visualize', description='Process input arguments')
+
+    vectorfields = list(calculate.VectorField(None)._fields.keys())
+
+    parser.add_argument('--field', '-f', action='store', default='none', required=False, choices=vectorfields, help='specify vector field type')
+    parser.add_argument('--xcenter', '-xc', action='store', default=(np.sqrt(2) * 0.2), type=float, required=False, help='x coordinate for center of the vector field')
+    parser.add_argument('--ycenter', '-yc', action='store', default=0, type=float, required=False, help='y coordinate for center of the vector field')
+    parser.add_argument('--dtheta', action='store', default=0.5, type=float, required=False, help='dtheta argument for generating some vector fields')
+    parser.add_argument('--radius', action='store', default=0.1, type=float, required=False, help='radius argument for generating some vector fields')
+    parser.add_argument('--buffer', action='store', default=0.0025, type=float, required=False, help='buffer argument for generating some vector fields')
+    parser.add_argument('--drmax', action='store', default=0.5, type=float, required=False, help='maximum speed in r direction that vector field can have')
+    parser.add_argument('--heatmap', '-hm', action='store_true', required=False, help='generates theta heatmap if present')
+    parser.add_argument('--state', '-s', action='store', required=True, choices=['animate', 'simulate', 'follow', 'none'], help="'animate': arm is animated according to sin and cos function ignoring vector field, 'simulate': arm dynamics are simulated for the given vector field, 'follow': arm is animated to move end effector to clicked location, 'none': do nothing")
+
+    return parser.parse_args()
+
+
 def main():
+    args = init_args()
+
     # init visualization stuff
     vis = SDLWrapper()
     vis.generate_device()
@@ -444,26 +466,21 @@ def main():
     arm = device.HapticDevice(False)
 
     # take cli args for vf
-    if '-field' in sys.argv:
-        field = sys.argv[sys.argv.index('-field') + 1]
-        if field not in calculate.VectorField(arm)._fields.keys():
-            raise UserWarning('Supplied field type does not exist')
-    else:
-        field = 'circle'
+    field = args.field
 
     vf_args = {
-        'xcenter': np.sqrt(2) * arm.arm0.length,
-        'ycenter': 0,
-        'dtheta': 0.5,
-        'radius': arm.arm0.length / 2,
-        'buffer': arm.arm0.length / 4 * 0.05,
-        'drmax': 0.5,
+        'xcenter': args.xcenter,
+        'ycenter': args.ycenter,
+        'dtheta': args.dtheta,
+        'radius': args.radius,
+        'buffer': args.buffer,
+        'drmax': args.drmax,
     }
     vf = calculate.VectorField(arm, field=field, args=vf_args)
 
     vis.vector_stream_plot(arm, vf)
 
-    if '-hm' in sys.argv:
+    if args.heatmap:
         vis.theta_heatmap(arm, vf, 0)
 
     global theta0, theta1
@@ -475,13 +492,15 @@ def main():
 
     running = True
     while running:
-        if '-animate' in sys.argv:
+        if args.state == 'animate':
+            vis.text([['State: animate']])
             t = time.monotonic()
             theta0 = np.pi / 4 * np.sin(t)
             theta1 = np.pi / 4 * np.cos(2 * t)
             vis.update_device(theta0, theta1)
 
-        elif '-follow' in sys.argv:
+        elif args.state == 'follow':
+            vis.text([['State: follow']])
             if recalculate:
                 print(f'xy: ({x}, {y}) | ij: ({i}, {j})')
                 vis.smooth_move_to_location(arm, x, y)
@@ -491,7 +510,7 @@ def main():
             elif len(vis.config_buffer) > 0:
                 vis.update_device(*vis.config_buffer.popleft())
 
-        elif '-simulate' in sys.argv:
+        elif args.state == 'simulate':
             if recalculate:
                 recalculate = False
                 vis.smooth_move_to_location(arm, x, y)
@@ -523,6 +542,9 @@ def main():
                 # write diagnostic text to window
                 text = [
                     [
+                        'State: simulate'
+                    ],
+                    [
                         f'x:       {x:6.3f}, y:       {y:6.3f}',
                     ],
                     [
@@ -538,6 +560,8 @@ def main():
                 vis.text(text)
 
         else:
+            vis.text([['State: none']])
+
             theta0, theta1 = 0, np.pi / 2
             vis.update_device(theta0, theta1)
 

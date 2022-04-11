@@ -324,6 +324,7 @@ class VectorField:
         self.args = args
         self.arm = arm
         self._fields = {
+            'none': lambda x, y: (0, 0),
             'circle': self.circle,
             'circlebound': self.circlebound,
             'spiralbound': self.spiralbound,
