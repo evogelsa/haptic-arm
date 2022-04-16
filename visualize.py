@@ -29,6 +29,7 @@ RED = sdl2.ext.Color(255, 0, 0)
 GREEN = sdl2.ext.Color(0, 255, 0)
 BLUE = sdl2.ext.Color(0, 0, 255)
 ORANGE = sdl2.ext.Color(232, 90, 9)
+CYAN = sdl2.ext.Color(0, 255, 255)
 
 # standard window size
 win_width = 800
@@ -427,7 +428,7 @@ class SDLWrapper:
         # render traces
         if self.trace:
             p = calculate.Coord(ppos=self.arms[1].get_end())
-            self.trace_buffer.append((p.j - 2, p.i - 2, 4, 4))
+            self.trace_buffer.append((int(p.j - 2), int(p.i - 2), 4, 4))
             self.renderer.fill(self.trace_buffer, color=RED)
 
         # render arm sprites
