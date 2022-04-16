@@ -141,6 +141,8 @@ class SDLWrapper:
         self.config_buffer = collections.deque([])
         self.trace_buffer = collections.deque(maxlen=tracelen)
 
+        self.workspace_points = None
+
         # init sdl systems
         sdl2.ext.init()
 
@@ -351,6 +353,29 @@ class SDLWrapper:
         #  cbar=False, xticklabels=False, yticklabels=False)
         plt.savefig('theta1.png')
 
+    def arm_workspace(self, arm: device.HapticDevice):
+        points = []
+
+        t1 = 5 * np.pi / 6
+        for t0 in np.linspace(np.pi / 2, -np.pi / 2, num=1000):
+            x, y = arm.fwd_kinematics(t0, t0 + t1)
+            c = calculate.Coord(cpos=(x, y))
+            points.extend((int(c.j), int(c.i)))
+
+        t0 = -np.pi / 2
+        for t1 in np.linspace(5 * np.pi / 6, 0, num=1000):
+            x, y = arm.fwd_kinematics(t0, t0 + t1)
+            c = calculate.Coord(cpos=(x, y))
+            points.extend((int(c.j), int(c.i)))
+
+        t1 = 0
+        for t0 in np.linspace(-np.pi / 2, np.pi / 2, num=1000):
+            x, y = arm.fwd_kinematics(t0, t0 + t1)
+            c = calculate.Coord(cpos=(x, y))
+            points.extend((int(c.j), int(c.i)))
+
+        self.workspace_points = points
+
     def generate_device(self, arm=device.HapticDevice(init_with_device=False)):
         """Generate device takes the haptic device class and turns it into two
         arm segments that will represent the arm"""
@@ -430,6 +455,9 @@ class SDLWrapper:
             p = calculate.Coord(ppos=self.arms[1].get_end())
             self.trace_buffer.append((int(p.j - 2), int(p.i - 2), 4, 4))
             self.renderer.fill(self.trace_buffer, color=RED)
+
+        if self.workspace_points:
+            self.renderer.draw_line(self.workspace_points, color=CYAN)
 
         # render arm sprites
         for arm in self.arms:
@@ -549,6 +577,13 @@ def init_args():
         help='how many points to draw to trace end effector',
         metavar='N',
     )
+    parser.add_argument(
+        '--workspace',
+        '-w',
+        action='store_true',
+        required=False,
+        help='calculates and displays arm workspace if present',
+    )
 
     return parser.parse_args()
 
@@ -579,6 +614,9 @@ def main():
 
     if args.heatmap:
         vis.theta_heatmap(arm, vf, 0)
+
+    if args.workspace:
+        vis.arm_workspace(arm)
 
     global theta0, theta1
     vis.update_device(theta0, theta1)
@@ -657,7 +695,7 @@ def main():
         else:
             vis.text([['State: none']])
 
-            theta0, theta1 = 0, np.pi / 2
+            theta0, theta1 = -np.pi / 2, -np.pi / 2 + 5 * np.pi / 6
             vis.update_device(theta0, theta1)
 
         vis.step()
