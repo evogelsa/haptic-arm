@@ -170,7 +170,9 @@ class HapticDevice:
         """
         self.odrive.reboot()
 
-    def fwd_kinematics(self, theta0: float, theta1: float) -> tuple[float]:
+    def fwd_kinematics(
+        self, theta0: float, theta1: float
+    ) -> tuple[float, float]:
         """
         Calculate the end effector position in cartesian coordinates from the
         given arm configuration
@@ -300,7 +302,7 @@ class HapticDevice:
             print('Unable to convert counts to radians; check arm calibrated')
             raise
 
-    def get_config(self) -> tuple[float]:
+    def get_config(self) -> tuple[float, float]:
         """
         Returns the current arm configuration as a tuple of joint angles
         in radians
