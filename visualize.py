@@ -10,7 +10,6 @@ import os
 import sys
 import argparse
 
-
 # check for OS and add sdl dlls if on windows
 if sys.platform == 'win32':
     sdlpath = os.path.join(os.path.dirname(__file__), 'lib')
@@ -42,6 +41,7 @@ elapsed_time = 0
 theta0 = 0
 theta1 = np.pi / 2
 
+
 # Render system to handle rendering texture sprites (the robot)
 class TextureRenderSystem(sdl2.ext.TextureSpriteRenderSystem):
     """TextureRenderSystem is a class which converts texures to sdl sprites"""
@@ -71,7 +71,7 @@ class ArmSegment(sdl2.ext.Entity):
         """gets the top left corner of segment for sdl rect in window cords"""
         cornerx = int(self.sprite.pos.window.j - self.sprite.size[0] / 2)
         cornery = self.sprite.pos.window.i
-        return (cornerx, cornery)
+        return cornerx, cornery
 
     def get_end(self):
         """gets the middle of the end of segment in polar cords"""
@@ -137,11 +137,23 @@ class SDLWrapper:
         self.spriterenderer = spriterenderer
         self.trace = tracelen > 0
 
+        # set by self.text
+        self.text_sprites = None
+
+        # set by self.vector_stream_plot
         self.vectors = None
+        self.squares = None
+        self.center = None
+
+        # calculated inside of self.step
         self.config_buffer = collections.deque([])
         self.trace_buffer = collections.deque(maxlen=tracelen)
 
+        # set by self.arm_workspace
         self.workspace_points = None
+
+        # set by self.generate_device
+        self.arms = None
 
         # init sdl systems
         sdl2.ext.init()
