@@ -241,7 +241,8 @@ class SDLWrapper:
                     vector.extend((int(coord.window.j), int(coord.window.i)))
                 self.vectors.append(vector)
 
-    def theta_heatmap(self, arm, vf, axis):
+    @staticmethod
+    def theta_heatmap(arm, vf, axis):
         """
         Create and update a texture that is a single color channel heatmap
         representing the theta velocities.
