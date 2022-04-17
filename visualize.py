@@ -31,15 +31,8 @@ ORANGE = sdl2.ext.Color(232, 90, 9)
 CYAN = sdl2.ext.Color(0, 255, 255)
 
 # standard window size
-win_width = 800
-win_height = 600
-
-# global elapsed time variable to keep track of visualization frame rate and
-# simulation rate
-elapsed_time = 0
-
-theta0 = 0
-theta1 = np.pi / 2
+WIN_WIDTH = 800
+WIN_HEIGHT = 600
 
 
 # Render system to handle rendering texture sprites (the robot)
@@ -58,7 +51,7 @@ class ArmSegment(sdl2.ext.Entity):
 
     def __init__(self, world, sprite, wposi=0, wposj=0, angle=0):
         pos = calculate.Coord(
-            wpos=(wposi, wposj), win_width=win_width, win_height=win_height
+            wpos=(wposi, wposj), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
         )
         self.world = world
         self.sprite = sprite
@@ -83,7 +76,7 @@ class ArmSegment(sdl2.ext.Entity):
             np.radians(-self.sprite.angle)
         ) + oy
         end = calculate.Coord(
-            cpos=(x, y), win_width=win_width, win_height=win_height
+            cpos=(x, y), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
         )
         return end.polar.r, end.polar.theta
 
@@ -161,7 +154,7 @@ class SDLWrapper:
         # create window, renderer, and the factory to create sprites
         if self.window is None:
             self.window = sdl2.ext.Window(
-                "Haptic Device", size=(win_width, win_height)
+                "Haptic Device", size=(WIN_WIDTH, WIN_HEIGHT)
             )
         if self.renderer is None:
             self.renderer = sdl2.ext.Renderer(self.window)
@@ -191,7 +184,7 @@ class SDLWrapper:
     def text(self, text: list, size=16):
         """Takes a list of lists and converts the contents into lines of text
         placed at the bottom left of the window"""
-        start_height = win_height - size * len(text)
+        start_height = WIN_HEIGHT - size * len(text)
         start_width = 0
         text_sprites = []
         for i in range(len(text)):
@@ -203,7 +196,7 @@ class SDLWrapper:
                 )
                 text_sprites[-1].position = (start_width, start_height)
                 start_width += text_sprites[-1].size[0] + 16
-                if start_width > win_width:
+                if start_width > WIN_WIDTH:
                     print(i, j, text)
                     raise Exception('Line too long to fit on window')
             start_height += size
@@ -217,8 +210,8 @@ class SDLWrapper:
         of the vector field."""
         center = calculate.Coord(
             cpos=(vf.args['xcenter'], vf.args['ycenter']),
-            win_width=win_width,
-            win_height=win_height,
+            win_width=WIN_WIDTH,
+            win_height=WIN_HEIGHT,
         )
 
         self.vectors = []  # stores points of vector lines
@@ -231,15 +224,15 @@ class SDLWrapper:
         # iterate over the width and height of the window, includes bounds if
         # step_size is a multiple of height and width
         for y in np.arange(
-            0, win_height // step_size * step_size + 1, step_size
+            0, WIN_HEIGHT // step_size * step_size + 1, step_size
         ):
             for x in np.arange(
-                0, win_width // step_size * step_size + 1, step_size
+                0, WIN_WIDTH // step_size * step_size + 1, step_size
             ):
                 # add initial point to squares and start a vector line
                 vector = []
                 coord = calculate.Coord(
-                    wpos=(y, x), win_width=win_width, win_height=win_height
+                    wpos=(y, x), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
                 )
                 vector.extend((int(coord.window.j), int(coord.window.i)))
                 self.squares.append((x - 3, y - 3, 6, 6))
@@ -273,23 +266,27 @@ class SDLWrapper:
         #  print('numerical:', arm.inv_kinematics_num(0, 0.4))
 
         binsz = 1
-        num_samples = win_width * win_height // (binsz ** 2)
+        num_samples = WIN_WIDTH * WIN_HEIGHT // (binsz ** 2)
 
         I, J = np.meshgrid(
-            np.arange(0, win_height, binsz), np.arange(0, win_width, binsz)
+            np.arange(0, WIN_HEIGHT, binsz), np.arange(0, WIN_WIDTH, binsz)
         )
         #  print(I.shape, J.shape)
         I = I.flatten()
         J = J.flatten()
 
-        X, Y = calculate.Coord(wpos=(I, J)).cartesian
+        X, Y = calculate.Coord(
+            wpos=(I, J), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
+        ).cartesian
 
         #  XYsq = X**2 + Y**2
         #  lensq = arm.arm0.length**2 + arm.arm1.length**2 + 0.01**2
         #  X = np.delete(X, np.argwhere((XYsq > 0.01**2) & (XYsq < lensq)))
         #  Y = np.delete(Y, np.argwhere((XYsq > 0.01**2) & (XYsq < lensq)))
 
-        I, J = calculate.Coord(cpos=(X, Y)).window
+        I, J = calculate.Coord(
+            cpos=(X, Y), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
+        ).window
 
         dX, dY = vf.return_vectors(X, Y)
 
@@ -329,36 +326,36 @@ class SDLWrapper:
         #  for row in dthetamatrix0.reshape((win_width//binsz, win_height//binsz)):
         #      print(row)
 
-        plt.figure(figsize=(win_width / 100, win_height / 100))
+        plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
-            dthetamatrix0.reshape((win_width // binsz, win_height // binsz)),
+            dthetamatrix0.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
             vmin=-2,
             vmax=2,
         )
         #  cbar=False, xticklabels=False, yticklabels=False)
         plt.savefig('dtheta0.png')
 
-        plt.figure(figsize=(win_width / 100, win_height / 100))
+        plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
-            Th0.reshape((win_width // binsz, win_height // binsz)),
+            Th0.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
             vmin=-2 * np.pi,
             vmax=2 * np.pi,
         )
         #  cbar=False, xticklabels=False, yticklabels=False)
         plt.savefig('theta0.png')
 
-        plt.figure(figsize=(win_width / 100, win_height / 100))
+        plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
-            dthetamatrix1.reshape((win_width // binsz, win_height // binsz)),
+            dthetamatrix1.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
             vmin=-2,
             vmax=2,
         )
         #  cbar=False, xticklabels=False, yticklabels=False)
         plt.savefig('dtheta1.png')
 
-        plt.figure(figsize=(win_width / 100, win_height / 100))
+        plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
-            Th1.reshape((win_width // binsz, win_height // binsz)),
+            Th1.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
             vmin=-2 * np.pi,
             vmax=2 * np.pi,
         )
@@ -371,19 +368,25 @@ class SDLWrapper:
         t1 = 5 * np.pi / 6
         for t0 in np.linspace(np.pi / 2, -np.pi / 2, num=1000):
             x, y = arm.fwd_kinematics(t0, t0 + t1)
-            c = calculate.Coord(cpos=(x, y))
+            c = calculate.Coord(
+                cpos=(x, y), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
+            )
             points.extend((int(c.j), int(c.i)))
 
         t0 = -np.pi / 2
         for t1 in np.linspace(5 * np.pi / 6, 0, num=1000):
             x, y = arm.fwd_kinematics(t0, t0 + t1)
-            c = calculate.Coord(cpos=(x, y))
+            c = calculate.Coord(
+                cpos=(x, y), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
+            )
             points.extend((int(c.j), int(c.i)))
 
         t1 = 0
         for t0 in np.linspace(-np.pi / 2, np.pi / 2, num=1000):
             x, y = arm.fwd_kinematics(t0, t0 + t1)
-            c = calculate.Coord(cpos=(x, y))
+            c = calculate.Coord(
+                cpos=(x, y), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
+            )
             points.extend((int(c.j), int(c.i)))
 
         self.workspace_points = points
@@ -395,12 +398,12 @@ class SDLWrapper:
             BLUE, size=(30, int(arm.arm0.length * calculate.PIXELS_PER_METER))
         )
         arm0 = ArmSegment(
-            self.world, arm0_sprite, wposj=win_width / 2, wposi=0, angle=0
+            self.world, arm0_sprite, wposj=WIN_WIDTH / 2, wposi=0, angle=0
         )
 
         endr, endtheta = arm0.get_end()
         pos = calculate.Coord(
-            ppos=(endr, endtheta), win_width=win_width, win_height=win_height
+            ppos=(endr, endtheta), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
         )
         arm1_sprite = self.spritefactory.from_color(
             ORANGE, size=(30, int(arm.arm1.length * calculate.PIXELS_PER_METER))
@@ -422,7 +425,7 @@ class SDLWrapper:
 
         r, theta = self.arms[0].get_end()
         pos = calculate.Coord(
-            ppos=(r, theta), win_width=win_width, win_height=win_height
+            ppos=(r, theta), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
         )
         angle1 = np.degrees(-theta1)
         self.arms[1].update(pos.window.j, pos.window.i, angle1)
@@ -448,7 +451,7 @@ class SDLWrapper:
             self.config_buffer.append(thetas)
 
     # run simulation
-    def step(self):
+    def step(self) -> float:
         """Advances the visualization one time/sim step ahead"""
         # time frame start
         frame_start = time.monotonic()
@@ -464,7 +467,11 @@ class SDLWrapper:
 
         # render traces
         if self.trace:
-            p = calculate.Coord(ppos=self.arms[1].get_end())
+            p = calculate.Coord(
+                ppos=self.arms[1].get_end(),
+                win_width=WIN_WIDTH,
+                win_height=WIN_HEIGHT,
+            )
             self.trace_buffer.append((int(p.j - 2), int(p.i - 2), 4, 4))
             self.renderer.fill(self.trace_buffer, color=RED)
 
@@ -481,7 +488,6 @@ class SDLWrapper:
 
         self.renderer.present()
 
-        global elapsed_time
         # preserve physics by calculating elapsed time and delaying if necessary
         # to limit to only 60 FPS. This prevents the robot velocity being
         # dependent on the frame rate of the simulation
@@ -489,6 +495,8 @@ class SDLWrapper:
         if elapsed_time < 1 / 60:
             sdl2.SDL_Delay(int((1 / 60 * 1000) - (elapsed_time * 1000)))
             elapsed_time = time.monotonic() - frame_start
+
+        return elapsed_time
 
 
 def init_args():
@@ -630,12 +638,17 @@ def main():
     if args.workspace:
         vis.arm_workspace(arm)
 
-    global theta0, theta1
+    theta0 = 0
+    theta1 = np.pi / 2
     vis.update_device(theta0, theta1)
 
     x, y = 0, 0
     i, j = 0, 0
     recalculate = False
+
+    # elapsed time variable to keep track of visualization frame rate and
+    # simulation rate
+    elapsed_time = 0
 
     running = True
     while running:
@@ -710,7 +723,7 @@ def main():
             theta0, theta1 = -np.pi / 2, -np.pi / 2 + 5 * np.pi / 6
             vis.update_device(theta0, theta1)
 
-        vis.step()
+        elapsed_time = vis.step()
         # check for window being closed or keypresses and keyboard control
         events = sdl2.ext.get_events()
         for event in events:
@@ -722,7 +735,9 @@ def main():
                 j, i = event.motion.x, event.motion.y
             if event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                 if event.button.button == sdl2.SDL_BUTTON_LEFT:
-                    x, y = calculate.Coord(wpos=(i, j)).cartesian
+                    x, y = calculate.Coord(
+                        wpos=(i, j), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
+                    ).cartesian
                     recalculate = True
 
 
