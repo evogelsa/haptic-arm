@@ -12,9 +12,8 @@ pyqtexample.py
 scrolling.py
 singleplot.py
 
-# theta heatmap filels, np data file and pngs
+# np compressed data files
 *.npz
-*.png
 
 # swap files, python binaries
 *.swp

@@ -276,6 +276,15 @@ class HapticDevice:
         """
         return np.linalg.pinv(self.jacobian(theta0, theta1))
 
+    def condition_number(self, theta0: float, theta1: float) -> float:
+        """
+        Returns the condition number of the given arm configuration using the
+        Frobenius norm
+        """
+        jnorm = np.linalg.norm(self.jacobian(theta0, theta1))
+        jinvnorm = np.linalg.norm(self.inv_jacobian(theta0, theta1))
+        return jnorm * jinvnorm
+
     def rad2count(self, theta: float, axis: int) -> int:
         """
         Convert radians to encoder counts

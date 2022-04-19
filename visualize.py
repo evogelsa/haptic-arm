@@ -287,22 +287,22 @@ class SDLWrapper:
             data = np.load(f'theta-heatmap/{vf.field}_data.npz')
             dthetamatrix0 = data['dthetamatrix0']
             dthetamatrix1 = data['dthetamatrix1']
-            th0 = data['Th0']
-            th1 = data['Th1']
+            th0mat = data['Th0']
+            th1mat = data['Th1']
         else:
-            th0 = np.empty(num_samples)
-            th1 = np.empty(num_samples)
+            th0mat = np.empty(num_samples)
+            th1mat = np.empty(num_samples)
             for idx, (x, y) in enumerate(zip(xmat, ymat)):
                 theta0, theta1 = arm.inv_kinematics_num(x, y)
-                th0[idx] = theta0
-                th1[idx] = theta1
+                th0mat[idx] = theta0
+                th1mat[idx] = theta1
                 print(f'Calculating IK: {idx+1}/{num_samples}', end='\r')
             print()
 
             dthetamatrix0 = np.empty(num_samples)
             dthetamatrix1 = np.empty(num_samples)
-            for idx, (th0, th1, dx, dy) in enumerate(zip(th0, th1, dxmat, dymat)):
-                dthetas = arm.inv_jacobian(th0, th1) @ np.array([dx, dy])
+            for idx, (t0, t1, dx, dy) in enumerate(zip(th0mat, th1mat, dxmat, dymat)):
+                dthetas = arm.inv_jacobian(t0, t1) @ np.array([dx, dy])
                 dthetamatrix0[idx] = dthetas[0]
                 dthetamatrix1[idx] = dthetas[1]
                 print(f'Calculating ijac: {idx+1}/{num_samples}', end='\r')
@@ -311,8 +311,8 @@ class SDLWrapper:
             print('Saving data...', end='\r')
             np.savez_compressed(
                 f'theta-heatmap/{vf.field}_data',
-                Th0=th0,
-                Th1=th1,
+                Th0=th0mat,
+                Th1=th1mat,
                 dthetamatrix0=dthetamatrix0,
                 dthetamatrix1=dthetamatrix1,
             )
@@ -332,7 +332,7 @@ class SDLWrapper:
         print('Generating theta0 heatmap...', end='\r')
         plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
-            th0.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
+            th0mat.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
             vmin=-2 * np.pi,
             vmax=2 * np.pi,
         )
@@ -354,13 +354,69 @@ class SDLWrapper:
         print('Generating theta1 heatmap...', end='\r')
         plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
-            th1.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
+            th1mat.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
             vmin=-2 * np.pi,
             vmax=2 * np.pi,
         )
         #  cbar=False, xticklabels=False, yticklabels=False)
         plt.savefig(f'theta-heatmap/{vf.field}_theta1.png')
         print('Generating theta1 heatmap...done')
+
+    @staticmethod
+    def condition_number_heatmap(arm):
+        """
+        Generates a heat map of the condition number
+        """
+        binsz = 1
+        num_samples = WIN_WIDTH * WIN_HEIGHT // (binsz ** 2)
+
+        imat, jmat = np.meshgrid(
+            np.arange(0, WIN_HEIGHT, binsz), np.arange(0, WIN_WIDTH, binsz)
+        )
+        imat = imat.flatten()
+        jmat = jmat.flatten()
+
+        xmat, ymat = calculate.Coord(
+            wpos=(imat, jmat), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
+        ).cartesian
+
+        if not os.path.isdir('condition-number-heatmap'):
+            os.mkdir('condition-number-heatmap')
+
+        if os.path.isfile(f'condition-number-heatmap/data.npz'):
+            data = np.load(f'condition-number-heatmap/data.npz')
+            kmat = data['kmat']
+        else:
+            th0mat = np.empty(num_samples)
+            th1mat = np.empty(num_samples)
+            for idx, (x, y) in enumerate(zip(xmat, ymat)):
+                theta0, theta1 = arm.inv_kinematics_num(x, y)
+                th0mat[idx] = theta0
+                th1mat[idx] = theta1
+                print(f'Calculating IK: {idx+1}/{num_samples}', end='\r')
+            print()
+
+            kmat = np.empty(num_samples)
+            for idx, (th0, th1) in enumerate(zip(th0mat, th1mat)):
+                k = arm.condition_number(th0, th1)
+                kmat[idx] = k
+                print(f'Calculating condition numbers: {idx+1}/{num_samples}', end='\r')
+            print()
+
+            print('Saving data...', end='\r')
+            np.savez_compressed(
+                f'condition-number-heatmap/data',
+                kmat=kmat,
+            )
+            print('Saving data...done')
+
+        print('Generating condition number heatmap...', end='\r')
+        plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
+        sb.heatmap(
+            kmat.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
+        )
+        plt.savefig(f'condition-number-heatmap/condition_number.png')
+        print('Generating condition number heatmap...done')
 
     def arm_workspace(self, arm: device.HapticDevice):
         points = []
@@ -568,8 +624,8 @@ def init_args():
         help='maximum speed in r direction that vector field can have',
     )
     parser.add_argument(
-        '--heatmap',
-        '-hm',
+        '--theta-heatmap',
+        '-th',
         action='store_true',
         required=False,
         help='generates theta heatmap if present',
@@ -604,13 +660,18 @@ def init_args():
         required=False,
         help='calculates and displays arm workspace if present',
     )
+    parser.add_argument(
+        '--condition-number-heatmap',
+        '-ch',
+        action='store_true',
+        required=False,
+        help='generates condition number heat map if present',
+    )
 
     return parser.parse_args()
 
 
-def main():
-    args = init_args()
-
+def main(args):
     # init visualization stuff
     vis = SDLWrapper(tracelen=args.trace)
     vis.generate_device()
@@ -632,8 +693,11 @@ def main():
 
     vis.vector_stream_plot(arm, vf)
 
-    if args.heatmap:
+    if args.theta_heatmap:
         vis.theta_heatmap(arm, vf)
+
+    if args.condition_number_heatmap:
+        vis.condition_number_heatmap(arm)
 
     if args.workspace:
         vis.arm_workspace(arm)
@@ -742,4 +806,5 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    arguments = init_args()
+    main(arguments)
