@@ -250,7 +250,7 @@ class SDLWrapper:
                 self.vectors.append(vector)
 
     @staticmethod
-    def theta_heatmap(arm, vf, axis):
+    def theta_heatmap(arm, vf):
         """
         Create and update a texture that is a single color channel heatmap
         representing the theta velocities.
@@ -268,64 +268,57 @@ class SDLWrapper:
         binsz = 1
         num_samples = WIN_WIDTH * WIN_HEIGHT // (binsz ** 2)
 
-        I, J = np.meshgrid(
+        imat, jmat = np.meshgrid(
             np.arange(0, WIN_HEIGHT, binsz), np.arange(0, WIN_WIDTH, binsz)
         )
-        #  print(I.shape, J.shape)
-        I = I.flatten()
-        J = J.flatten()
+        imat = imat.flatten()
+        jmat = jmat.flatten()
 
-        X, Y = calculate.Coord(
-            wpos=(I, J), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
+        xmat, ymat = calculate.Coord(
+            wpos=(imat, jmat), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
         ).cartesian
 
-        #  XYsq = X**2 + Y**2
-        #  lensq = arm.arm0.length**2 + arm.arm1.length**2 + 0.01**2
-        #  X = np.delete(X, np.argwhere((XYsq > 0.01**2) & (XYsq < lensq)))
-        #  Y = np.delete(Y, np.argwhere((XYsq > 0.01**2) & (XYsq < lensq)))
+        dxmat, dymat = vf.return_vectors(xmat, ymat)
 
-        I, J = calculate.Coord(
-            cpos=(X, Y), win_width=WIN_WIDTH, win_height=WIN_HEIGHT
-        ).window
+        if not os.path.isdir('theta-heatmap'):
+            os.mkdir('theta-heatmap')
 
-        dX, dY = vf.return_vectors(X, Y)
-
-        if os.path.isfile('data.npz'):
-            data = np.load('data.npz')
+        if os.path.isfile(f'theta-heatmap/{vf.field}_data.npz'):
+            data = np.load(f'theta-heatmap/{vf.field}_data.npz')
             dthetamatrix0 = data['dthetamatrix0']
             dthetamatrix1 = data['dthetamatrix1']
-            Th0 = data['Th0']
-            Th1 = data['Th1']
+            th0 = data['Th0']
+            th1 = data['Th1']
         else:
-            Th0 = np.empty(num_samples)
-            Th1 = np.empty(num_samples)
-            for idx, (x, y) in enumerate(zip(X, Y)):
+            th0 = np.empty(num_samples)
+            th1 = np.empty(num_samples)
+            for idx, (x, y) in enumerate(zip(xmat, ymat)):
                 theta0, theta1 = arm.inv_kinematics_num(x, y)
-                Th0[idx] = theta0
-                Th1[idx] = theta1
+                th0[idx] = theta0
+                th1[idx] = theta1
                 print(f'Calculating IK: {idx+1}/{num_samples}', end='\r')
             print()
 
             dthetamatrix0 = np.empty(num_samples)
             dthetamatrix1 = np.empty(num_samples)
-            for idx, (th0, th1, dx, dy) in enumerate(zip(Th0, Th1, dX, dY)):
+            for idx, (th0, th1, dx, dy) in enumerate(zip(th0, th1, dxmat, dymat)):
                 dthetas = arm.inv_jacobian(th0, th1) @ np.array([dx, dy])
                 dthetamatrix0[idx] = dthetas[0]
                 dthetamatrix1[idx] = dthetas[1]
                 print(f'Calculating ijac: {idx+1}/{num_samples}', end='\r')
             print()
 
+            print('Saving data...', end='\r')
             np.savez_compressed(
-                'data',
-                Th0=Th0,
-                Th1=Th1,
+                f'theta-heatmap/{vf.field}_data',
+                Th0=th0,
+                Th1=th1,
                 dthetamatrix0=dthetamatrix0,
                 dthetamatrix1=dthetamatrix1,
             )
+            print('Saving data...done')
 
-        #  for row in dthetamatrix0.reshape((win_width//binsz, win_height//binsz)):
-        #      print(row)
-
+        print('Generating dtheta0 heatmap...', end='\r')
         plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
             dthetamatrix0.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
@@ -333,17 +326,21 @@ class SDLWrapper:
             vmax=2,
         )
         #  cbar=False, xticklabels=False, yticklabels=False)
-        plt.savefig('dtheta0.png')
+        plt.savefig(f'theta-heatmap/{vf.field}_dtheta0.png')
+        print('Generating dtheta0 heatmap...done')
 
+        print('Generating theta0 heatmap...', end='\r')
         plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
-            Th0.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
+            th0.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
             vmin=-2 * np.pi,
             vmax=2 * np.pi,
         )
         #  cbar=False, xticklabels=False, yticklabels=False)
-        plt.savefig('theta0.png')
+        plt.savefig(f'theta-heatmap/{vf.field}_theta0.png')
+        print('Generating theta0 heatmap...done')
 
+        print('Generating dtheta1 heatmap...', end='\r')
         plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
             dthetamatrix1.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
@@ -351,16 +348,19 @@ class SDLWrapper:
             vmax=2,
         )
         #  cbar=False, xticklabels=False, yticklabels=False)
-        plt.savefig('dtheta1.png')
+        plt.savefig(f'theta-heatmap/{vf.field}_dtheta1.png')
+        print('Generating dtheta1 heatmap...done')
 
+        print('Generating theta1 heatmap...', end='\r')
         plt.figure(figsize=(WIN_WIDTH / 100, WIN_HEIGHT / 100))
         sb.heatmap(
-            Th1.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
+            th1.reshape((WIN_WIDTH // binsz, WIN_HEIGHT // binsz)),
             vmin=-2 * np.pi,
             vmax=2 * np.pi,
         )
         #  cbar=False, xticklabels=False, yticklabels=False)
-        plt.savefig('theta1.png')
+        plt.savefig(f'theta-heatmap/{vf.field}_theta1.png')
+        print('Generating theta1 heatmap...done')
 
     def arm_workspace(self, arm: device.HapticDevice):
         points = []
@@ -398,7 +398,7 @@ class SDLWrapper:
             BLUE, size=(30, int(arm.arm0.length * calculate.PIXELS_PER_METER))
         )
         arm0 = ArmSegment(
-            self.world, arm0_sprite, wposj=WIN_WIDTH / 2, wposi=0, angle=0
+            self.world, arm0_sprite, wposj=WIN_WIDTH // 2, wposi=0, angle=0
         )
 
         endr, endtheta = arm0.get_end()
@@ -633,7 +633,7 @@ def main():
     vis.vector_stream_plot(arm, vf)
 
     if args.heatmap:
-        vis.theta_heatmap(arm, vf, 0)
+        vis.theta_heatmap(arm, vf)
 
     if args.workspace:
         vis.arm_workspace(arm)

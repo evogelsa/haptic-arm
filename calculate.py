@@ -31,8 +31,7 @@ def map(v, vmin, vmax, tmin, tmax):
     """
     Map a given value in a range [vmin,vmax] to a target range [tmin,tmax]
     """
-    v = min(v, vmax)
-    v = max(v, vmin)
+    v = np.clip(v, vmin, vmax)
     vrange = vmax - vmin
     vscale = (v - vmin) / vrange
     trange = tmax - tmin
@@ -395,7 +394,7 @@ class VectorField:
         r, theta = cart2polar(x, y)
 
         dr = 0
-        if r > outer:
+        if np.greater(r, outer):
             vel_eq = r - outer
             # vel_eq is linear based on distance from outer circle boundary
             # so map this to a reasonable range for the velocity
@@ -406,7 +405,7 @@ class VectorField:
                 0,
                 -drmax,
             )
-        elif r < inner:
+        elif np.less(r, inner):
             vel_eq = inner - r
             dr = map(
                 vel_eq, 0, self.arm.arm0.length + self.arm.arm1.length, 0, drmax
