@@ -206,7 +206,7 @@ class SDLWrapper:
             start_width = 0
         self.text_sprites = text_sprites
 
-    def vector_stream_plot(self, arm, vf):
+    def vector_stream_plot(self, vf):
         """Visualizes the given vector field with a stream plot. Small
         rectangles mark the sampling points and the trails move in the direction
         of the vector field at those sampled points. Green rect shows the center
@@ -304,7 +304,9 @@ class SDLWrapper:
 
             dthetamatrix0 = np.empty(num_samples)
             dthetamatrix1 = np.empty(num_samples)
-            for idx, (t0, t1, dx, dy) in enumerate(zip(th0mat, th1mat, dxmat, dymat)):
+            for idx, (t0, t1, dx, dy) in enumerate(
+                zip(th0mat, th1mat, dxmat, dymat)
+            ):
                 dthetas = arm.inv_jacobian(t0, t1) @ np.array([dx, dy])
                 dthetamatrix0[idx] = dthetas[0]
                 dthetamatrix1[idx] = dthetas[1]
@@ -403,7 +405,10 @@ class SDLWrapper:
             for idx, (th0, th1) in enumerate(zip(th0mat, th1mat)):
                 k = arm.condition_number(th0, th1)
                 kmat[idx] = k
-                print(f'Calculating condition numbers: {idx+1}/{num_samples}', end='\r')
+                print(
+                    f'Calculating condition numbers: {idx+1}/{num_samples}',
+                    end='\r',
+                )
             print()
 
             print('Saving data...', end='\r')
@@ -694,7 +699,7 @@ def main(args):
     }
     vf = calculate.VectorField(arm, field=field, args=vf_args)
 
-    vis.vector_stream_plot(arm, vf)
+    vis.vector_stream_plot(vf)
 
     if args.theta_heatmap:
         vis.theta_heatmap(arm, vf)

@@ -50,9 +50,9 @@ def step(arm, vf, vis=None):
     #  arm.odrive.axis1.controller.input_torque = vel1
 
     if vis is not None:
-        count0 = arm.rad2count(theta0)
-        count1 = arm.rad2count(theta1)
-        line1 = "count0 : {:9d} | count1 : {:9d}".format(count0, count1)
+        count0 = arm.rad2count(theta0, 0)
+        count1 = arm.rad2count(theta1, 1)
+        line1 = "count0 : {:9.0f} | count1 : {:9.0f}".format(count0, count1)
         line2 = "theta0 : {:9.2f} | theta1 : {:9.2f}".format(theta0, theta1)
         line3 = "x      : {:9.2f} | y      : {:9.2f}".format(x, y)
         line4 = "dx     : {:9.2f} | dy     : {:9.2f}".format(dx, dy)
@@ -97,7 +97,7 @@ def main():
     # use custom homing routine to define counts/angle
     arm.home()
 
-    input('press enter to continue...')
+    input('Press enter to continue...')
 
     # setup control mode
     arm.set_ctrl_mode_velocity()
@@ -180,10 +180,11 @@ def main():
     # and generate the arm segments
     vis.generate_device(arm)
     # and draw the vector field
-    vis.vector_stream_plot(vf, arm)
+    vis.vector_stream_plot(vf)
+
+    print('Press Ctrl + C to exit, or close the visualization window')
 
     try:
-        print(visualize.STATE_RUNNING)
         visualize.STATE_RUNNING = True
         while visualize.STATE_RUNNING:
             step(arm, vf, vis)
