@@ -34,6 +34,9 @@ CYAN = sdl2.ext.Color(0, 255, 255)
 WIN_WIDTH = 800
 WIN_HEIGHT = 600
 
+# global state variable used by main to check status of visualization
+STATE_RUNNING = False
+
 
 # Render system to handle rendering texture sprites (the robot)
 class TextureRenderSystem(sdl2.ext.TextureSpriteRenderSystem):
@@ -714,8 +717,9 @@ def main(args):
     # simulation rate
     elapsed_time = 0
 
-    running = True
-    while running:
+    global STATE_RUNNING
+    STATE_RUNNING = True
+    while STATE_RUNNING:
         if args.state == 'animate':
             vis.text([['State: animate']])
             t = time.monotonic()
@@ -793,7 +797,7 @@ def main(args):
         for event in events:
             if event.type == sdl2.SDL_QUIT:
                 sdl2.ext.quit()
-                running = False
+                STATE_RUNNING = False
                 break
             if event.type == sdl2.SDL_MOUSEMOTION:
                 j, i = event.motion.x, event.motion.y

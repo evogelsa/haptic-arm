@@ -3,7 +3,6 @@ import calculate
 import visualize
 
 from argparse import ArgumentParser
-from sys import exit, argv
 import numpy as np
 
 
@@ -106,7 +105,7 @@ def main():
     # parse cl arguments
     parser = ArgumentParser(description='Parse field parameters')
     parser.add_argument(
-        '-x',
+        '-xc',
         '--xcenter',
         dest='xcenter',
         type=float,
@@ -114,7 +113,7 @@ def main():
         help='center of vector field in x direction',
     )
     parser.add_argument(
-        '-y',
+        '-yc',
         '--ycenter',
         dest='ycenter',
         type=float,
@@ -184,14 +183,14 @@ def main():
     vis.vector_stream_plot(vf, arm)
 
     try:
-        running = True
-        while running:
+        print(visualize.STATE_RUNNING)
+        visualize.STATE_RUNNING = True
+        while visualize.STATE_RUNNING:
             step(arm, vf, vis)
-            running = visualize.check_running()
         stop(arm)
     except KeyboardInterrupt:
         stop(arm)
 
 
 if __name__ == "__main__":
-    exit(main())
+    main()
