@@ -58,4 +58,6 @@ materials.
 | M8 all thread                     | xx                  | 1 meter  |
 | M8 nuts                           | xx                  | 4        |
 | Various M3 screws and nuts        | xx                  | < 50     |
+| T5 73 tooth timing belt           | T5-365-10           | 1        |
+| T5 37 tooth timing belt           | T5-185-10           | 2        |
 
