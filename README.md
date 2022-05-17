@@ -44,7 +44,18 @@ long as the arm lengths are adjusted in the `HapticDevice` class instances.
 
 ### Bill of Materials
 
-If you do want to replicate the design I used, here is the bill of materials.
+If you do want to replicate the design I used, here is a rough bill of
+materials.
 
-{{BOM}}
+| Part                              | Part Number         | Quantity |
+|-----------------------------------|---------------------|----------|
+| OpenBeam precut kit               | 100540              | 1        |
+| ODrive (v3.5+)                    | ODrive v3.5         | 1        |
+| ODrive dual shaft motor 270 kV    | D5065-270KV         | 2        |
+| CUI encoders                      | AMT102-V            | 2        |
+| Cable for CUI AMT-102             | find on ODrive shop | 2        |
+| Yellow Jacket 608 bearings 8 pack | B071DT4V1Q          | 2        |
+| M8 all thread                     | xx                  | 1 meter  |
+| M8 nuts                           | xx                  | 4        |
+| Various M3 screws and nuts        | xx                  | < 50     |
 
