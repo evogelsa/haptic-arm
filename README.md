@@ -12,7 +12,7 @@ desired magnitudes and directions for points on a cartesian plane.
 
 A simulation of the arm using this code can be seen here.
 
-![Simulation](https://i.imgur.com/62qTkmU.mp4)
+[Simulation](https://i.imgur.com/62qTkmU.mp4)
 
 ### File Descriptions
 
