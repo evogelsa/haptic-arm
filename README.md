@@ -12,7 +12,7 @@ desired magnitudes and directions for points on a cartesian plane.
 
 A simulation of the arm using this code can be seen here.
 
-![arm sim](https://i.imgur.com/62qTkmU.gifv)
+![Simulation](https://i.imgur.com/62qTkmU.mp4)
 
 ### File Descriptions
 
@@ -77,9 +77,9 @@ timing belts. Motor control is done through a 24V ODrive motor controller
 (hardware v3.5). Two CUI AMT102-V encoders are used in conjunction with two
 ODrive D5065-270K motors to drive the robot.
 
-![arm](pics/arm.png)
+![arm](pics/arm_base.jpg)
 
-![odrive](pics/odrive.png)
+![odrive](pics/odrive.jpg)
 
 Mechanical design is not my strong suit, but the upside is that this robot
 should be relatively hardware agnostic. A person with more hardware skill and
@@ -116,9 +116,10 @@ materials.
 ### ODrive
 
 The ODrive, motors, and encoders will need to be configured before this project
-can be used. Documentation on the [odrive website](docs.odriverobotics.com/)
-should be followed for this. Most importantly, the PIDs of the controller will
-need to be well tuned for the motors to work effectively.
+can be used. Documentation on the
+[odrive website](https://docs.odriverobotics.com/) should be followed for this.
+Most importantly, the PIDs of the controller will need to be well tuned for the
+motors to work effectively.
 
 ### Code
 
