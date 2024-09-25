@@ -10,9 +10,11 @@ used to carefully apply forces to the end-effector depending on the current arm
 configuration. These forces are determined by a vector field that maps out the
 desired magnitudes and directions for points on a cartesian plane.
 
-A simulation of the arm using this code can be seen here.
+A simulation of the arm using this code can be seen here (hint: click the image
+to see it animated).
 
-[Simulation](https://i.imgur.com/62qTkmU.mp4)
+[![Simulation](https://i.imgur.com/62qTkmU.png)](https://i.imgur.com/62qTkmU.webm)
+
 
 ### File Descriptions
 
